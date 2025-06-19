@@ -1,0 +1,18 @@
+<expr> ::= <equality>
+<equality> ::= <relational> ("=" <relational> | "<>" <relational>)*
+<relational> ::= <concatenation> (("<" | "<=" | ">" | ">=") <concatenation>)*
+<concatenation> ::= <add> ("&" <add>)*
+<add> ::= <mul> ("+" <mul> | "-" <mul>)*
+<mul> ::= <unary> ("*" <unary> | "/" <unary>)*
+<unary> ::= ("+" | "-")? <primary>
+<primary> ::= <num> | <ident> | <string> | "{" <array_rows> "}" | <funcname> "(" <args>? ")" | "(" <expr> ")"
+<array_rows> ::= <array_row> (";" <array_row>)*
+<array_row> ::= <constant> ("," <constant>)*
+<constant> ::= <num> | <string> | "TRUE" | "FALSE"
+<string> ::= "\"" any* "\""
+<funcname> ::= <ident> ("." | <ident> | <num>)*
+<args> ::= <expr> ("," <expr>?)*
+<num> ::= <digit>+
+<digit> ::= [0-9]
+<ident> ::= (<char> | "_" | "\")+
+<char> ::= ([a-z] | [A-Z])

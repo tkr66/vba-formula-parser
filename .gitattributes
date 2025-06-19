@@ -1,0 +1,15 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+*.bas       text    eol=crlf diff=sjis
+*.cls       text    eol=crlf diff=sjis
+*.frm       text    eol=crlf diff=sjis
+*.frx       binary  eol=crlf
+*.dcm       text    eol=crlf diff=sjis
+*.vbaproj   text    eol=crlf
+*.wsf       text    eol=crlf
+*.bat       text    eol=crlf
+*.cls linguist-language=VBA
+*.dcm linguist-language=VBA
+*.vbaproj linguist-language=INI
+*.xlsm filter=lfs diff=lfs merge=lfs -text
+*.xls filter=lfs diff=lfs merge=lfs -text
