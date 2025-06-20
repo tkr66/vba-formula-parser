@@ -242,16 +242,10 @@ End Sub
 Private Sub DumpTokens(toks As Collection)
     Dim t As Variant
     For Each t In toks
-        Dim tt() As Variant
-        tt = t
-        Debug.Print TokenString(tt)
+        Debug.Print "kind: " & TokenKindMap(t(0)) & ", val: " & t(1)
     Next t
     Debug.Print
 End Sub
-
-Private Function TokenString(tok() As Variant) As String
-    TokenString = "kind: " & TokenKindMap(tok(0)) & ", val: " & tok(1)
-End Function
 
 Private Sub DumpNode(node As Dictionary, indentLevel As Long)
     Dim k As NodeKind
@@ -275,10 +269,6 @@ Private Sub DumpNode(node As Dictionary, indentLevel As Long)
         Debug.Print
     End If
 End Sub
-
-Private Function NodeString(node As Dictionary) As String
-
-End Function
 
 Private Sub AssertEq(x As Variant, y As Variant)
     If CStr(x) <> CStr(y) Then
