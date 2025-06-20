@@ -257,6 +257,7 @@ Sub TestTokenize()
     Dim t As Variant
     For Each t In tests
         If CStr(t) <> "" Then
+            Debug.Print t
             Call DumpTokens(Tokenize(CStr(t)))
         End If
     Next t
@@ -275,6 +276,7 @@ Sub TestParse()
     Dim t As Variant
     For Each t In tests
         If CStr(t) <> "" Then
+            Debug.Print t
             Call DumpNode(Parse(CStr(t)), 0)
         End If
     Next t
