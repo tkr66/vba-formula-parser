@@ -122,7 +122,7 @@ End Function
 
 Private Sub Expect(toks As Collection, prefix As String)
     If Not Consume(toks, prefix) Then
-        Call ErrorAt2(toks, "expected " & prefix)
+        Call ErrorAt2(toks, "expected " & "'" & prefix & "'")
     End If
 End Sub
 
@@ -136,12 +136,16 @@ Private Sub ErrorAt(rest As String, msg As String)
 End Sub
 
 Private Sub ErrorAt2(toks As Collection, msg As String)
-    Dim t() As Variant
-    t = toks(pos_)
-    Dim pos As Long
-    pos = Len(input_) - t(2)
+    Dim start As Long
+    If pos_ <= toks.Count Then
+        Dim t() As Variant
+        t = toks(pos_)
+        start = t(2)
+    Else
+        start = pos_
+    End If
     Debug.Print input_
-    Debug.Print String(pos, " ") & "^ " & msg
+    Debug.Print String(start - 1, " ") & "^ " & msg
     Debug.Print
     End
 End Sub
@@ -229,6 +233,7 @@ Sub TestParse()
         "1+2", _
         "1+2*3", _
         "(1+2)*3", _
+        "x+y*z", _
         "" _
     )
     Dim t As Variant
