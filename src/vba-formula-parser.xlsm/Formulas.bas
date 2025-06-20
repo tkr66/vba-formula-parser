@@ -143,8 +143,11 @@ End Sub
 Private Sub ErrorAt(rest As String, msg As String)
     Dim pos As Long
     pos = Len(input_) - Len(rest)
-    Debug.Print input_
-    Debug.Print String(pos, " ") & "^ " & msg
+    Dim prefix As String
+    prefix = String(4, " ")
+    Debug.Print "error:"
+    Debug.Print prefix & input_
+    Debug.Print prefix & String(pos, " ") & "^ " & msg
     Debug.Print
     End
 End Sub
@@ -158,8 +161,11 @@ Private Sub ErrorAt2(toks As Collection, msg As String)
     Else
         start = pos_
     End If
-    Debug.Print input_
-    Debug.Print String(start - 1, " ") & "^ " & msg
+    Dim prefix As String
+    prefix = String(4, " ")
+    Debug.Print "error:"
+    Debug.Print prefix & input_
+    Debug.Print prefix & String(start - 1, " ") & "^ " & msg
     Debug.Print
     End
 End Sub
