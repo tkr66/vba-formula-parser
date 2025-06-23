@@ -175,7 +175,7 @@ Private Sub ErrorAt(rest As String, msg As String)
     pos = Len(input_) - Len(rest)
     Dim prefix As String
     prefix = String(4, " ")
-    Debug.Print "error:"
+    Debug.Print "tokenize error:"
     Debug.Print prefix & input_
     Debug.Print prefix & String(pos, " ") & "^ " & msg
     Debug.Print
@@ -188,6 +188,10 @@ Public Function Parse(str As String) As Dictionary
     pos_ = 1
 
     Set Parse = Expr(toks)
+
+    If toks.Count >= pos_ Then
+        Call ErrorAt2(toks, "unexpected trailing token")
+    End If
 End Function
 
 Private Function NewNode(kind As String) As Dictionary
@@ -246,7 +250,7 @@ Private Sub ErrorAt2(toks As Collection, msg As String)
     End If
     Dim prefix As String
     prefix = String(4, " ")
-    Debug.Print "error:"
+    Debug.Print "parse error:"
     Debug.Print prefix & input_
     Debug.Print prefix & String(start - 1, " ") & "^ " & msg
     Debug.Print
