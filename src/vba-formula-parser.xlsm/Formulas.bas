@@ -398,7 +398,7 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
     Dim indent As String
     buf = String(256, vbNullChar)
     pos = 1
-    indent = Space(indentLevel * indentLength)
+    indent = NewIndent(indentLevel, indentLength)
     Dim k As NodeKind
     Dim v As Variant
     k = node("kind")
@@ -417,7 +417,7 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
                 Call PushString(buf, pos, " ")
                 Call PushString(buf, pos, Pretty(node("rhs"), indentLength, indentLevel + 1))
                 Call PushString(buf, pos, vbCrLf)
-                Call PushString(buf, pos, String((indentLevel - 1) * indentLength, " "))
+                Call PushString(buf, pos, NewIndent(indentLevel - 1, indentLength))
                 Call PushString(buf, pos, ")")
             Else
                 Call PushString(buf, pos, Pretty(node("lhs"), indentLength, indentLevel + 1))
@@ -426,10 +426,40 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
                 Call PushString(buf, pos, " ")
                 Call PushString(buf, pos, Pretty(node("rhs"), indentLength, indentLevel + 1))
             End If
+        Case ND_FUNC
+            Call PushString(buf, pos, node("name"))
+            Call PushString(buf, pos, "(")
+            Dim args_ As Collection
+            Set args_ = node("args")
+            If args_.Count = 0 Then
+                Call PushString(buf, pos, ")")
+            Else
+                Call PushString(buf, pos, vbCrLf)
+                Dim i As Long
+                For i = 1 To args_.Count
+                    Call PushString(buf, pos, NewIndent(indentLevel + 1, indentLength))
+                    Call PushString(buf, pos, Pretty(args_(i), indentLength, indentLevel + 1))
+                    If i < args_.Count Then
+                        Call PushString(buf, pos, ",")
+                        Call PushString(buf, pos, vbCrLf)
+                    End If
+                Next i
+                Call PushString(buf, pos, vbCrLf)
+                Call PushString(buf, pos, NewIndent(indentLevel, indentLength))
+                Call PushString(buf, pos, ")")
+            End If
         Case Else
     End Select
 
     Pretty = Mid(buf, 1, pos - 1)
+End Function
+
+Private Function NewIndent(level As Long, length As Long) As String
+    If level <= 0 Then
+        NewIndent = ""
+        Exit Function
+    End If
+    NewIndent = Space(level * length)
 End Function
 
 Private Sub PushString(ByRef buf As String, start As Long, val As String)

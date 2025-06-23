@@ -102,6 +102,8 @@ Sub TestPretty()
     tests = Array( _
         "(ab+cd)*3", _
         "(((((1=2)<>3)<4)<=5)>6)>=7", _
+        "SUM(MIN(1, MAX(3, NOW(a))))", _
+        "IF(AND(1=1,MIN(x)=MAX(y)),NOW(),DATE(1990,1,1))", _
         "" _
     )
     Dim t As Variant
