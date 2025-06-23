@@ -16,6 +16,12 @@ Private Enum NodeKind
     ND_MUL
     ND_DIV
     ND_IDENT
+    ND_EQ
+    ND_NE
+    ND_LT
+    ND_LE
+    ND_GT
+    ND_GE
 End Enum
 
 Static Property Get TokenKindMap() As Dictionary
@@ -33,6 +39,12 @@ Static Property Get NodeKindMap() As Dictionary
     NodeKindMap.Add ND_MUL, "ND_MUL"
     NodeKindMap.Add ND_DIV, "ND_DIV"
     NodeKindMap.Add ND_IDENT, "ND_IDENT"
+    NodeKindMap.Add ND_EQ, "ND_EQ"
+    NodeKindMap.Add ND_NE, "ND_NE"
+    NodeKindMap.Add ND_LT, "ND_LT"
+    NodeKindMap.Add ND_LE, "ND_LE"
+    NodeKindMap.Add ND_GT, "ND_GT"
+    NodeKindMap.Add ND_GE, "ND_GE"
 End Property
 
 Private Function Tokenize(str As String) As Collection
@@ -72,6 +84,25 @@ Private Function Tokenize(str As String) As Collection
                     i = i + 1
                 Loop While IsIdent(Mid(str, i, 1))
                 toks.Add NewToken(TK_IDENT, Mid(str, start, i - start), start)
+            Case c = "="
+                toks.Add NewToken(TK_PUNCT, c, i)
+                i = i + 1
+            Case c = "<"
+                If Mid(str, i + 1, 1) = ">" Or Mid(str, i + 1, 1) = "=" Then
+                    toks.Add NewToken(TK_PUNCT, Mid(str, i, 2), i)
+                    i = i + 2
+                Else
+                    toks.Add NewToken(TK_PUNCT, c, i)
+                    i = i + 1
+                End If
+            Case c = ">"
+                If Mid(str, i + 1, 1) = "=" Then
+                    toks.Add NewToken(TK_PUNCT, Mid(str, i, 2), i)
+                    i = i + 2
+                Else
+                    toks.Add NewToken(TK_PUNCT, c, i)
+                    i = i + 1
+                End If
             Case Else
                 Call ErrorAt(Mid(str, i), "unexpected token")
         End Select
@@ -170,8 +201,49 @@ Private Sub ErrorAt2(toks As Collection, msg As String)
     End
 End Sub
 
-' <expr>    ::= <mul> ("+" <mul> | "-" <mul>)*
+' <expr>    ::= <equality>
 Private Function Expr(toks As Collection) As Dictionary
+    Set Expr = Equality(toks)
+End Function
+
+' <equality> ::= <relational> ("=" <relational> | "<>" <relational>)*
+Private Function Equality(toks As Collection) As Dictionary
+    Dim node As Dictionary
+    Set node = Relational(toks)
+    Do
+        If Consume(toks, "=") Then
+            Set node = NewBinary(ND_EQ, node, Relational(toks))
+        ElseIf Consume(toks, "<>") Then
+            Set node = NewBinary(ND_NE, node, Relational(toks))
+        Else
+            Set Equality = node
+            Exit Function
+        End If
+    Loop
+End Function
+
+' <relational> ::= <add> ("<" <add> | "<=" <add> | ">" <add> | ">=" <add>)*
+Private Function Relational(toks As Collection) As Dictionary
+    Dim node As Dictionary
+    Set node = Add(toks)
+    Do
+        If Consume(toks, "<") Then
+            Set node = NewBinary(ND_LT, node, Add(toks))
+        ElseIf Consume(toks, "<=") Then
+            Set node = NewBinary(ND_LE, node, Add(toks))
+        ElseIf Consume(toks, ">") Then
+            Set node = NewBinary(ND_GT, node, Add(toks))
+        ElseIf Consume(toks, ">=") Then
+            Set node = NewBinary(ND_GE, node, Add(toks))
+        Else
+            Set Relational = node
+            Exit Function
+        End If
+    Loop
+End Function
+
+' <add>    ::= <mul> ("+" <mul> | "-" <mul>)*
+Private Function Add(toks As Collection) As Dictionary
     Dim node As Dictionary
     Set node = Mul(toks)
     Do
@@ -180,7 +252,7 @@ Private Function Expr(toks As Collection) As Dictionary
         ElseIf Consume(toks, "-") Then
             Set node = NewBinary(ND_SUB, node, Mul(toks))
         Else
-            Set Expr = node
+            Set Add = node
             Exit Function
         End If
     Loop
@@ -253,6 +325,7 @@ Sub TestTokenize()
         "(1-23)*4", _
         "SUM(12)*3", _
         "SUM(12, 34)*5", _
+        "1=2<>3<4<=5>6>=7", _
         "" _
     )
     Dim t As Variant
@@ -273,6 +346,8 @@ Sub TestParse()
         "x+y*z", _
         "(ab+cd)*ef", _
         "+12*-3/+xyz", _
+        "1=2<>3<4<=5>6>=7", _
+        "(((((1=2)<>3)<4)<=5)>6)>=7", _
         "" _
     )
     Dim t As Variant
@@ -294,17 +369,18 @@ End Sub
 
 Private Sub DumpNode(node As Dictionary, indentLevel As Long)
     Dim k As NodeKind
+    k = node("kind")
     Dim indent As String
     Dim prefix As String
-    k = node("kind")
     indent = String(indentLevel * 2, " ")
     prefix = indentLevel & " " & indent
     Select Case k
         Case ND_NUM, ND_IDENT
-            Debug.Print prefix & "kind: " & NodeKindMap(k)
-            Debug.Print prefix & "val: " & node("val")
-        Case ND_ADD, ND_SUB, ND_MUL, ND_DIV
-            Debug.Print prefix & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "val: " & node("val")
+        Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
+             ND_EQ, ND_NE, ND_LT, ND_LE, ND_GT, ND_GE
+            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
             Debug.Print prefix & "lhs:"
             Call DumpNode(node("lhs"), indentLevel + 1)
             Debug.Print prefix & "rhs:"
