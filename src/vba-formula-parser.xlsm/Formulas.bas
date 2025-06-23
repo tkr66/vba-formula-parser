@@ -189,7 +189,7 @@ Public Function Parse(str As String) As Dictionary
 
     Set Parse = Expr(toks)
 
-    If toks.Count >= pos_ Then
+    If pos_ <= toks.Count Then
         Call ErrorAt2(toks, "unexpected trailing token")
     End If
 End Function
