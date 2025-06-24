@@ -128,37 +128,17 @@ Public Function Tokenize(str As String) As Collection
                 toks.Add NewToken(TK_PUNCT, c, i)
                 i = i + 1
             Case IsIdent(c)
-                Dim expectFuncName As Boolean
                 Dim cur As String
                 start = i
                 Do
                     i = i + 1
                     cur = Mid(str, i, 1)
-                    Select Case True
-                        Case IsIdent(cur)
-                        Case cur = "."
-                            expectFuncName = True
-                        Case IsNumeric(cur)
-                        Case Else
-                            Exit Do
-                    End Select
-                Loop
-                If expectFuncName Then
-                    If Mid(str, i, 1) <> "(" Then
-                        ErrorAt str, "expected '('"
-                    End If
+                Loop While IsIdent(cur) Or IsNumeric(cur)
+                If Mid(str, i, 1) = "(" Then
                     toks.Add NewToken(TK_FUNCNAME, Mid(str, start, i - start), start)
                 Else
-                    If IsNumeric(Mid(str, i - 1, 1)) Then
-                        ErrorAt str, "expected a char"
-                    End If
-                    If Mid(str, i, 1) = "(" Then
-                        toks.Add NewToken(TK_FUNCNAME, Mid(str, start, i - start), start)
-                    Else
-                        toks.Add NewToken(TK_IDENT, Mid(str, start, i - start), start)
-                    End If
+                    toks.Add NewToken(TK_IDENT, Mid(str, start, i - start), start)
                 End If
-                expectFuncName = False
             Case c = """"
                 start = i
                 i = i + 1
@@ -214,7 +194,7 @@ Private Function IsIdent(c As String) As Boolean
     End If
     Dim dec As Long
     dec = Asc(c)
-    IsIdent = (97 <= dec And dec <= 122) Or (65 <= dec And dec <= 90) Or c = "_" Or c = "\"
+    IsIdent = (97 <= dec And dec <= 122) Or (65 <= dec And dec <= 90) Or c = "_" Or c = "\" Or c = "."
 End Function
 
 Private Sub ErrorAt(rest As String, msg As String)
