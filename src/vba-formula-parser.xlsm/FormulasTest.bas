@@ -22,6 +22,16 @@ Sub TestTokenize()
             Token(TK_PUNCT, "(", 1), Token(TK_PUNCT, ")", 2) _
         )))
     tests.Add Array( _
+        "test tokenize ident", _
+        "var,\a,FU_NC", _
+        Stringify(Array( _
+            Token(TK_IDENT, "var", 1), _
+            Token(TK_PUNCT, ",", 4), _
+            Token(TK_IDENT, "\a", 5), _
+            Token(TK_PUNCT, ",", 7), _
+            Token(TK_IDENT, "FU_NC", 8) _
+        )))
+    tests.Add Array( _
         "test tokenize simple function call", _
         "SUM(12)", _
         Stringify(Array( _

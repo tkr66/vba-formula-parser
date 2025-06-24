@@ -207,7 +207,7 @@ Private Function IsIdent(c As String) As Boolean
     End If
     Dim dec As Long
     dec = Asc(c)
-    IsIdent = (97 <= dec And dec <= 122) Or (65 <= dec And dec <= 90)
+    IsIdent = (97 <= dec And dec <= 122) Or (65 <= dec And dec <= 90) Or c = "_" Or c = "\"
 End Function
 
 Private Sub ErrorAt(rest As String, msg As String)
