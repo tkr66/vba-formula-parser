@@ -208,10 +208,10 @@ Private Sub ErrorAt(rest As String, msg As String)
     Dim pos As Long
     pos = Len(input_) - Len(rest)
     Dim prefix As String
-    prefix = String(4, " ")
+    prefix = Space(4)
     Debug.Print "tokenize error:"
     Debug.Print prefix & input_
-    Debug.Print prefix & String(pos, " ") & "^ " & msg
+    Debug.Print prefix & Space(pos) & "^ " & msg
     Debug.Print
     End
 End Sub
@@ -323,10 +323,10 @@ Private Sub ErrorAt2(p As Parser, msg As String)
         start = p.pos
     End If
     Dim prefix As String
-    prefix = String(4, " ")
+    prefix = Space(4)
     Debug.Print "parse error:"
     Debug.Print prefix & input_
-    Debug.Print prefix & String(start - 1, " ") & "^ " & msg
+    Debug.Print prefix & Space(start - 1) & "^ " & msg
     Debug.Print
     End
 End Sub
@@ -473,12 +473,9 @@ Private Function Args(p As Parser) As Collection
 End Function
 
 Public Function Pretty(node As Dictionary, indentLength As Long, Optional indentLevel As Long = 0) As String
-    Dim buf As String
-    Dim pos As Long
     Dim sb As StringBuffer
-    sb = NewStringBuffer(256)
     Dim k As NodeKind
-    Dim v As Variant
+    sb = NewStringBuffer(256)
     k = node("kind")
     Select Case k
         Case ND_NUM, ND_IDENT
