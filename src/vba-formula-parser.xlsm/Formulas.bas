@@ -454,10 +454,8 @@ End Function
 Public Function Pretty(node As Dictionary, indentLength As Long, Optional indentLevel As Long = 0) As String
     Dim buf As String
     Dim pos As Long
-    Dim indent As String
     Dim sb As StringBuffer
     sb = NewStringBuffer(256)
-    indent = NewIndent(indentLevel, indentLength)
     Dim k As NodeKind
     Dim v As Variant
     k = node("kind")
@@ -473,7 +471,7 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
             If node("enclosed") Then
                 Push sb, "("
                 Push sb, vbCrLf
-                Push sb, indent
+                Push sb, NewIndent(indentLevel + 1, indentLength)
                 Push sb, Pretty(node("lhs"), indentLength, indentLevel + 1)
                 Push sb, " "
                 Push sb, OperatorMap(k)
@@ -483,11 +481,11 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
                 Push sb, NewIndent(indentLevel - 1, indentLength)
                 Push sb, ")"
             Else
-                Push sb, Pretty(node("lhs"), indentLength, indentLevel + 1)
+                Push sb, Pretty(node("lhs"), indentLength, indentLevel)
                 Push sb, " "
                 Push sb, OperatorMap(k)
                 Push sb, " "
-                Push sb, Pretty(node("rhs"), indentLength, indentLevel + 1)
+                Push sb, Pretty(node("rhs"), indentLength, indentLevel)
             End If
         Case ND_FUNC
             Push sb, node("name")

@@ -146,6 +146,15 @@ Sub TestPretty()
         """hello world""" _
     )
     tests.Add Array( _
+        "test compare functions", _
+        "MIN(x)=MAX(y)", _
+        "MIN(" & vbCrLf & _
+        "  x" & vbCrLf & _
+        ") = MAX(" & vbCrLf & _
+        "  y" & vbCrLf & _
+        ")" _
+    )
+    tests.Add Array( _
         "test pretty complex expression", _
         "IF(AND(1=1,MIN(x)=MAX(y)),NOW(),DATE(1990,1,1))", _
         "IF(" & vbCrLf & _
@@ -173,7 +182,8 @@ Sub TestPretty()
             If actualPretty = CStr(t(2)) Then
                 Debug.Print "ok: " & t(0)
             Else
-                Debug.Print "assert failed: " & t(0)
+                Debug.Print "ng: " & t(0)
+                Debug.Print "assert failed: "
                 Debug.Print "  " & "input: " & t(1)
                 Debug.Print "  " & "left  == " & actualPretty
                 Debug.Print "  " & "right == " & t(2)
