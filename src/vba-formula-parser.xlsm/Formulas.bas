@@ -559,7 +559,7 @@ Public Function NewStringBuffer(size As Long) As StringBuffer
     NewStringBuffer = sb
 End Function
 
-Public Sub Push(ByRef sb As StringBuffer, val As String)
+Public Sub Push(sb As StringBuffer, val As String)
     Do While Len(val) > (Len(sb.buf) - sb.pos) + 1
         DoubleBuffer sb
     Loop
@@ -567,7 +567,7 @@ Public Sub Push(ByRef sb As StringBuffer, val As String)
     sb.pos = sb.pos + Len(val)
 End Sub
 
-Private Sub DoubleBuffer(ByRef sb As StringBuffer)
+Private Sub DoubleBuffer(sb As StringBuffer)
     Dim curLen As Long
     curLen = Len(sb.buf)
     If curLen * 2 > BUF_MAX Then
