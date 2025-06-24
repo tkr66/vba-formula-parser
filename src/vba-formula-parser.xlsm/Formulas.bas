@@ -202,12 +202,12 @@ Private Sub ErrorAt(rest As String, msg As String)
     Dim pos As Long
     pos = Len(input_) - Len(rest)
     Dim prefix As String
-    prefix = Space(4)
-    Debug.Print "tokenize error:"
-    Debug.Print prefix & input_
-    Debug.Print prefix & Space(pos) & "^ " & msg
-    Debug.Print
-    End
+    Dim m As String
+    prefix = NewIndent(1, 4)
+    m = m & "tokenize error:" & vbCrLf
+    m = m & prefix & input_ & vbCrLf
+    m = m & prefix & NewIndent(1, 0) & "^ " & msg
+    Err.Raise 5, Description:=m
 End Sub
 
 Public Function Parse(str As String) As Dictionary
@@ -333,17 +333,17 @@ Private Sub ErrorAt2(p As Parser, msg As String)
     If HasNext(p) Then
         Dim t As Token
         t = NextToken(p)
-        start = t.pos
+        start = t.pos - 1
     Else
         start = p.pos
     End If
     Dim prefix As String
-    prefix = Space(4)
-    Debug.Print "parse error:"
-    Debug.Print prefix & input_
-    Debug.Print prefix & Space(start - 1) & "^ " & msg
-    Debug.Print
-    End
+    Dim m As String
+    prefix = NewIndent(1, 4)
+    m = m & "parse error:" & vbCrLf
+    m = m & prefix & input_ & vbCrLf
+    m = m & prefix & NewIndent(1, start - 1) & "^ " & msg
+    Err.Raise 5, Description:=m
 End Sub
 
 ' <expr>    ::= <equality>
@@ -666,7 +666,7 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
 End Function
 
 Private Function NewIndent(level As Long, length As Long) As String
-    If level <= 0 Then
+    If level <= 0 Or length <= 0 Then
         NewIndent = ""
         Exit Function
     End If

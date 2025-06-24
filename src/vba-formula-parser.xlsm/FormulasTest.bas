@@ -256,6 +256,11 @@ Sub TestPretty()
         ")" _
     )
     tests.Add Array( _
+        "failed parse", _
+        "{a}", _
+        "}" _
+    )
+    tests.Add Array( _
         "test pretty array", _
         "{1,2;""3"",""4"";TRUE,FALSE}*{2,2}", _
         "{" & vbCrLf & _
@@ -269,17 +274,28 @@ Sub TestPretty()
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
-            Dim actualPretty As String
-            actualPretty = Formulas.Pretty(Formulas.Parse(CStr(t(1))), 2)
-            If actualPretty = CStr(t(2)) Then
-                Debug.Print "ok: " & t(0)
-            Else
-                Debug.Print "ng: " & t(0)
-                Debug.Print "assert failed: "
-                Debug.Print "  " & "input: " & t(1)
-                Debug.Print "  " & "left  == " & actualPretty
-                Debug.Print "  " & "right == " & t(2)
-                Debug.Print
+            On Error GoTo Catch
+                Dim actualPretty As String
+                actualPretty = Formulas.Pretty(Formulas.Parse(CStr(t(1))), 2)
+                If actualPretty = CStr(t(2)) Then
+                    Debug.Print "ok: " & t(0)
+                Else
+                    Debug.Print "ng: " & t(0)
+                    Debug.Print "assert failed: "
+                    Debug.Print "  " & "input: " & t(1)
+                    Debug.Print "  " & "left  == " & actualPretty
+                    Debug.Print "  " & "right == " & t(2)
+                    Debug.Print
+                End If
+            On Error GoTo 0
+Catch:
+            If Err.Number <> 0 Then
+                If Left(t(0), 6) = "failed" Then
+                    Debug.Print "ok: " & t(0)
+                Else
+                    Debug.Print "ng: " & t(0)
+                End If
+                Debug.Print "  " & Err.Description
             End If
         End If
     Next t
