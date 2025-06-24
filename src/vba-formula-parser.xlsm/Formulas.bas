@@ -10,6 +10,12 @@ Public Enum TokenKind
     TK_STRING
 End Enum
 
+Private Type Token
+    kind As TokenKind
+    val As Variant
+    pos As Long
+End Type
+
 Public Enum NodeKind
     ND_NUM
     ND_ADD
@@ -216,7 +222,7 @@ Public Function Parse(str As String) As Dictionary
 
     Dim root As Dictionary
     Set root = Expr(p)
-    If p.pos <= p.tokens.Count Then
+    If HasNext(p) Then
         ErrorAt2 p, "unexpected trailing token"
     End If
 
@@ -262,23 +268,42 @@ Private Function NewFunc(name_ As String, args_ As Collection) As Dictionary
     NewFunc.Add "args", args_
 End Function
 
-Private Sub Advance(ByRef p As Parser)
+Private Sub Advance(p As Parser)
     p.pos = p.pos + 1
 End Sub
 
-Private Function Current(p As Parser) As Variant()
-    Current = p.tokens(p.pos)
+Private Sub Rewind(p As Parser)
+    p.pos = p.pos - 1
+End Sub
+
+Private Function HasNext(p As Parser) As Boolean
+    HasNext = (p.pos <= p.tokens.Count)
+End Function
+
+Private Function NextToken(p As Parser) As Token
+    If Not HasNext(p) Then
+        ErrorAt2 p, "no more tokens can be parsed"
+    End If
+
+    Dim t() As Variant
+    t = p.tokens(p.pos)
+    Advance p
+
+    Dim tok As Token
+    tok.kind = t(0)
+    tok.val = t(1)
+    tok.pos = t(2)
+
+    NextToken = tok
 End Function
 
 Private Function Consume(p As Parser, prefix As String) As Boolean
-    If p.pos > p.tokens.Count Then
-        Exit Function
-    End If
-    Dim t() As Variant
-    t = Current(p)
-    If t(0) = TK_PUNCT And t(1) = prefix Then
+    Dim t As Token
+    t = NextToken(p)
+    If t.kind = TK_PUNCT And t.val = prefix Then
         Consume = True
-        Advance p
+    Else
+        Rewind p
     End If
 End Function
 
@@ -290,10 +315,10 @@ End Sub
 
 Private Sub ErrorAt2(p As Parser, msg As String)
     Dim start As Long
-    If p.pos <= p.tokens.Count Then
-        Dim t() As Variant
-        t = Current(p)
-        start = t(2)
+    If HasNext(p) Then
+        Dim t As Token
+        t = NextToken(p)
+        start = t.pos
     Else
         start = p.pos
     End If
@@ -315,23 +340,23 @@ End Function
 Private Function Equality(p As Parser) As Dictionary
     Dim node As Dictionary
     Set node = Relational(p)
-    Do
+    Do While HasNext(p)
         If Consume(p, "=") Then
             Set node = NewBinary(ND_EQ, node, Relational(p))
         ElseIf Consume(p, "<>") Then
             Set node = NewBinary(ND_NE, node, Relational(p))
         Else
-            Set Equality = node
-            Exit Function
+            Exit Do
         End If
     Loop
+    Set Equality = node
 End Function
 
 ' <relational> ::= <add> ("<" <add> | "<=" <add> | ">" <add> | ">=" <add>)*
 Private Function Relational(p As Parser) As Dictionary
     Dim node As Dictionary
     Set node = Add(p)
-    Do
+    Do While HasNext(p)
         If Consume(p, "<") Then
             Set node = NewBinary(ND_LT, node, Add(p))
         ElseIf Consume(p, "<=") Then
@@ -341,42 +366,42 @@ Private Function Relational(p As Parser) As Dictionary
         ElseIf Consume(p, ">=") Then
             Set node = NewBinary(ND_GE, node, Add(p))
         Else
-            Set Relational = node
-            Exit Function
+            Exit Do
         End If
     Loop
+    Set Relational = node
 End Function
 
 ' <add>    ::= <mul> ("+" <mul> | "-" <mul>)*
 Private Function Add(p As Parser) As Dictionary
     Dim node As Dictionary
     Set node = Mul(p)
-    Do
+    Do While HasNext(p)
         If Consume(p, "+") Then
             Set node = NewBinary(ND_ADD, node, Mul(p))
         ElseIf Consume(p, "-") Then
             Set node = NewBinary(ND_SUB, node, Mul(p))
         Else
-            Set Add = node
-            Exit Function
+            Exit Do
         End If
     Loop
+    Set Add = node
 End Function
 
 ' <mul>     ::= <unary> ("*" <unary> | "/" <unary>)*
 Private Function Mul(p As Parser) As Dictionary
     Dim node As Dictionary
     Set node = Unary(p)
-    Do
+    Do While HasNext(p)
         If Consume(p, "*") Then
             Set node = NewBinary(ND_MUL, node, Unary(p))
         ElseIf Consume(p, "/") Then
             Set node = NewBinary(ND_DIV, node, Unary(p))
         Else
-            Set Mul = node
-            Exit Function
+            Exit Do
         End If
     Loop
+    Set Mul = node
 End Function
 
 ' <unary>   ::= ("+" | "-")? <primary>
@@ -401,29 +426,25 @@ Private Function Primary(p As Parser) As Dictionary
         Exit Function
     End If
 
-    Dim t() As Variant
-    t = Current(p)
+    Dim t As Token
+    t = NextToken(p)
 
-    If t(0) = TK_NUM Then
-        Set Primary = NewNum(CLng(t(1)))
-        Advance p
+    If t.kind = TK_NUM Then
+        Set Primary = NewNum(CLng(t.val))
         Exit Function
     End If
 
-    If t(0) = TK_IDENT Then
-        Set Primary = NewIdent(CStr(t(1)))
-        Advance p
+    If t.kind = TK_IDENT Then
+        Set Primary = NewIdent(CStr(t.val))
         Exit Function
     End If
 
-    If t(0) = TK_STRING Then
-        Set Primary = NewString(CStr(t(1)))
-        Advance p
+    If t.kind = TK_STRING Then
+        Set Primary = NewString(CStr(t.val))
         Exit Function
     End If
 
-    If t(0) = TK_FUNCNAME Then
-        Advance p
+    If t.kind = TK_FUNCNAME Then
         Expect p, "("
         Dim args_ As Collection
         If Consume(p, ")") Then
@@ -432,7 +453,7 @@ Private Function Primary(p As Parser) As Dictionary
             Set args_ = Args(p)
             Expect p, ")"
         End If
-        Set Primary = NewFunc(CStr(t(1)), args_)
+        Set Primary = NewFunc(CStr(t.val), args_)
         Exit Function
     End If
 
