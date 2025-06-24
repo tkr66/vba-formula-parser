@@ -9,7 +9,6 @@ Public Enum TokenKind
     TK_FUNCNAME
 End Enum
 
-Private pos_ As Long
 Public Enum NodeKind
     ND_NUM
     ND_ADD
@@ -25,6 +24,16 @@ Public Enum NodeKind
     ND_GE
     ND_FUNC
 End Enum
+
+Private Type Parser
+    tokens As Collection
+    pos As Long
+End Type
+
+Private Type StringBuffer
+    buf As String
+    pos As Long
+End Type
 
 Private Const BUF_MAX As Long = 8096
 
@@ -116,12 +125,12 @@ Public Function Tokenize(str As String) As Collection
                 Loop
                 If expectFuncName Then
                     If Mid(str, i, 1) <> "(" Then
-                        Call ErrorAt(str, "expected '('")
+                        ErrorAt str, "expected '('"
                     End If
                     toks.Add NewToken(TK_FUNCNAME, Mid(str, start, i - start), start)
                 Else
                     If IsNumeric(Mid(str, i - 1, 1)) Then
-                        Call ErrorAt(str, "expected a char")
+                        ErrorAt str, "expected a char"
                     End If
                     If Mid(str, i, 1) = "(" Then
                         toks.Add NewToken(TK_FUNCNAME, Mid(str, start, i - start), start)
@@ -150,7 +159,7 @@ Public Function Tokenize(str As String) As Collection
                     i = i + 1
                 End If
             Case Else
-                Call ErrorAt(Mid(str, i), "unexpected token")
+                ErrorAt Mid(str, i), "unexpected token"
         End Select
     Loop
     Set Tokenize = toks
@@ -183,15 +192,23 @@ Private Sub ErrorAt(rest As String, msg As String)
 End Sub
 
 Public Function Parse(str As String) As Dictionary
-    Dim toks As Collection
-    Set toks = Tokenize(str)
-    pos_ = 1
+    Dim p As Parser
+    p = NewParser(Tokenize(str))
 
-    Set Parse = Expr(toks)
-
-    If pos_ <= toks.Count Then
-        Call ErrorAt2(toks, "unexpected trailing token")
+    Dim root As Dictionary
+    Set root = Expr(p)
+    If p.pos <= p.tokens.Count Then
+        ErrorAt2 p, "unexpected trailing token"
     End If
+
+    Set Parse = root
+End Function
+
+Private Function NewParser(tokens As Collection) As Parser
+    Dim p As Parser
+    Set p.tokens = tokens
+    p.pos = 1
+    NewParser = p
 End Function
 
 Private Function NewNode(kind As String) As Dictionary
@@ -221,32 +238,40 @@ Private Function NewFunc(name_ As String, args_ As Collection) As Dictionary
     NewFunc.Add "args", args_
 End Function
 
-Private Function Consume(toks As Collection, prefix As String) As Boolean
-    If pos_ > toks.Count Then
+Private Sub Advance(ByRef p As Parser)
+    p.pos = p.pos + 1
+End Sub
+
+Private Function Current(p As Parser) As Variant()
+    Current = p.tokens(p.pos)
+End Function
+
+Private Function Consume(p As Parser, prefix As String) As Boolean
+    If p.pos > p.tokens.Count Then
         Exit Function
     End If
-    Dim v() As Variant
-    v = toks(pos_)
-    If v(0) = TK_PUNCT And v(1) = prefix Then
+    Dim t() As Variant
+    t = Current(p)
+    If t(0) = TK_PUNCT And t(1) = prefix Then
         Consume = True
-        pos_ = pos_ + 1
+        Advance p
     End If
 End Function
 
-Private Sub Expect(toks As Collection, prefix As String)
-    If Not Consume(toks, prefix) Then
-        Call ErrorAt2(toks, "expected " & "'" & prefix & "'")
+Private Sub Expect(p As Parser, prefix As String)
+    If Not Consume(p, prefix) Then
+        ErrorAt2 p, "expected " & "'" & prefix & "'"
     End If
 End Sub
 
-Private Sub ErrorAt2(toks As Collection, msg As String)
+Private Sub ErrorAt2(p As Parser, msg As String)
     Dim start As Long
-    If pos_ <= toks.Count Then
+    If p.pos <= p.tokens.Count Then
         Dim t() As Variant
-        t = toks(pos_)
+        t = Current(p)
         start = t(2)
     Else
-        start = pos_
+        start = p.pos
     End If
     Dim prefix As String
     prefix = String(4, " ")
@@ -258,19 +283,19 @@ Private Sub ErrorAt2(toks As Collection, msg As String)
 End Sub
 
 ' <expr>    ::= <equality>
-Private Function Expr(toks As Collection) As Dictionary
-    Set Expr = Equality(toks)
+Private Function Expr(p As Parser) As Dictionary
+    Set Expr = Equality(p)
 End Function
 
 ' <equality> ::= <relational> ("=" <relational> | "<>" <relational>)*
-Private Function Equality(toks As Collection) As Dictionary
+Private Function Equality(p As Parser) As Dictionary
     Dim node As Dictionary
-    Set node = Relational(toks)
+    Set node = Relational(p)
     Do
-        If Consume(toks, "=") Then
-            Set node = NewBinary(ND_EQ, node, Relational(toks))
-        ElseIf Consume(toks, "<>") Then
-            Set node = NewBinary(ND_NE, node, Relational(toks))
+        If Consume(p, "=") Then
+            Set node = NewBinary(ND_EQ, node, Relational(p))
+        ElseIf Consume(p, "<>") Then
+            Set node = NewBinary(ND_NE, node, Relational(p))
         Else
             Set Equality = node
             Exit Function
@@ -279,18 +304,18 @@ Private Function Equality(toks As Collection) As Dictionary
 End Function
 
 ' <relational> ::= <add> ("<" <add> | "<=" <add> | ">" <add> | ">=" <add>)*
-Private Function Relational(toks As Collection) As Dictionary
+Private Function Relational(p As Parser) As Dictionary
     Dim node As Dictionary
-    Set node = Add(toks)
+    Set node = Add(p)
     Do
-        If Consume(toks, "<") Then
-            Set node = NewBinary(ND_LT, node, Add(toks))
-        ElseIf Consume(toks, "<=") Then
-            Set node = NewBinary(ND_LE, node, Add(toks))
-        ElseIf Consume(toks, ">") Then
-            Set node = NewBinary(ND_GT, node, Add(toks))
-        ElseIf Consume(toks, ">=") Then
-            Set node = NewBinary(ND_GE, node, Add(toks))
+        If Consume(p, "<") Then
+            Set node = NewBinary(ND_LT, node, Add(p))
+        ElseIf Consume(p, "<=") Then
+            Set node = NewBinary(ND_LE, node, Add(p))
+        ElseIf Consume(p, ">") Then
+            Set node = NewBinary(ND_GT, node, Add(p))
+        ElseIf Consume(p, ">=") Then
+            Set node = NewBinary(ND_GE, node, Add(p))
         Else
             Set Relational = node
             Exit Function
@@ -299,14 +324,14 @@ Private Function Relational(toks As Collection) As Dictionary
 End Function
 
 ' <add>    ::= <mul> ("+" <mul> | "-" <mul>)*
-Private Function Add(toks As Collection) As Dictionary
+Private Function Add(p As Parser) As Dictionary
     Dim node As Dictionary
-    Set node = Mul(toks)
+    Set node = Mul(p)
     Do
-        If Consume(toks, "+") Then
-            Set node = NewBinary(ND_ADD, node, Mul(toks))
-        ElseIf Consume(toks, "-") Then
-            Set node = NewBinary(ND_SUB, node, Mul(toks))
+        If Consume(p, "+") Then
+            Set node = NewBinary(ND_ADD, node, Mul(p))
+        ElseIf Consume(p, "-") Then
+            Set node = NewBinary(ND_SUB, node, Mul(p))
         Else
             Set Add = node
             Exit Function
@@ -315,14 +340,14 @@ Private Function Add(toks As Collection) As Dictionary
 End Function
 
 ' <mul>     ::= <unary> ("*" <unary> | "/" <unary>)*
-Private Function Mul(toks As Collection) As Dictionary
+Private Function Mul(p As Parser) As Dictionary
     Dim node As Dictionary
-    Set node = Unary(toks)
+    Set node = Unary(p)
     Do
-        If Consume(toks, "*") Then
-            Set node = NewBinary(ND_MUL, node, Unary(toks))
-        ElseIf Consume(toks, "/") Then
-            Set node = NewBinary(ND_DIV, node, Unary(toks))
+        If Consume(p, "*") Then
+            Set node = NewBinary(ND_MUL, node, Unary(p))
+        ElseIf Consume(p, "/") Then
+            Set node = NewBinary(ND_DIV, node, Unary(p))
         Else
             Set Mul = node
             Exit Function
@@ -331,66 +356,66 @@ Private Function Mul(toks As Collection) As Dictionary
 End Function
 
 ' <unary>   ::= ("+" | "-")? <primary>
-Private Function Unary(toks As Collection) As Dictionary
-    If Consume(toks, "+") Then
-        Set Unary = Primary(toks)
-    ElseIf Consume(toks, "-") Then
-        Set Unary = NewBinary(ND_SUB, NewNum(0), Primary(toks))
+Private Function Unary(p As Parser) As Dictionary
+    If Consume(p, "+") Then
+        Set Unary = Primary(p)
+    ElseIf Consume(p, "-") Then
+        Set Unary = NewBinary(ND_SUB, NewNum(0), Primary(p))
     Else
-        Set Unary = Primary(toks)
+        Set Unary = Primary(p)
     End If
 End Function
 
 ' <primary> ::= <num> | <ident> | <funcname> "(" <args>? ")" | "(" <expr> ")"
-Private Function Primary(toks As Collection) As Dictionary
-    If Consume(toks, "(") Then
+Private Function Primary(p As Parser) As Dictionary
+    If Consume(p, "(") Then
         Dim node As Dictionary
-        Set node = Expr(toks)
-        Call Expect(toks, ")")
+        Set node = Expr(p)
+        Expect p, ")"
         node("enclosed") = True
         Set Primary = node
         Exit Function
     End If
 
     Dim t() As Variant
-    t = toks(pos_)
+    t = Current(p)
 
     If t(0) = TK_NUM Then
         Set Primary = NewNum(CLng(t(1)))
-        pos_ = pos_ + 1
+        Advance p
         Exit Function
     End If
 
     If t(0) = TK_IDENT Then
         Set Primary = NewIdent(CStr(t(1)))
-        pos_ = pos_ + 1
+        Advance p
         Exit Function
     End If
 
     If t(0) = TK_FUNCNAME Then
-        pos_ = pos_ + 1
-        Call Expect(toks, "(")
+        Advance p
+        Expect p, "("
         Dim args_ As Collection
-        If Consume(toks, ")") Then
+        If Consume(p, ")") Then
             Set args_ = New Collection
         Else
-            Set args_ = Args(toks)
-            Call Expect(toks, ")")
+            Set args_ = Args(p)
+            Expect p, ")"
         End If
         Set Primary = NewFunc(CStr(t(1)), args_)
         Exit Function
     End If
 
-    Call ErrorAt2(toks, "expected a number or an ident or an expression")
+    ErrorAt2 p, "expected a number or an ident or an expression"
 End Function
 
 ' <args> ::= <expr> ("," <expr>)*
-Private Function Args(toks As Collection) As Collection
+Private Function Args(p As Parser) As Collection
     Dim c As Collection
     Set c = New Collection
-    c.Add Expr(toks)
-    Do While Consume(toks, ",")
-        c.Add Expr(toks)
+    c.Add Expr(p)
+    Do While Consume(p, ",")
+        c.Add Expr(p)
     Loop
 
     Set Args = c
@@ -400,62 +425,62 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
     Dim buf As String
     Dim pos As Long
     Dim indent As String
-    buf = String(256, vbNullChar)
-    pos = 1
+    Dim sb As StringBuffer
+    sb = NewStringBuffer(256)
     indent = NewIndent(indentLevel, indentLength)
     Dim k As NodeKind
     Dim v As Variant
     k = node("kind")
     Select Case k
         Case ND_NUM, ND_IDENT
-            Call PushString(buf, pos, node("val"))
+            Push sb, node("val")
         Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
              ND_EQ, ND_NE, ND_LT, ND_LE, ND_GT, ND_GE
             If node("enclosed") Then
-                Call PushString(buf, pos, "(")
-                Call PushString(buf, pos, vbCrLf)
-                Call PushString(buf, pos, indent)
-                Call PushString(buf, pos, Pretty(node("lhs"), indentLength, indentLevel + 1))
-                Call PushString(buf, pos, " ")
-                Call PushString(buf, pos, OperatorMap(k))
-                Call PushString(buf, pos, " ")
-                Call PushString(buf, pos, Pretty(node("rhs"), indentLength, indentLevel + 1))
-                Call PushString(buf, pos, vbCrLf)
-                Call PushString(buf, pos, NewIndent(indentLevel - 1, indentLength))
-                Call PushString(buf, pos, ")")
+                Push sb, "("
+                Push sb, vbCrLf
+                Push sb, indent
+                Push sb, Pretty(node("lhs"), indentLength, indentLevel + 1)
+                Push sb, " "
+                Push sb, OperatorMap(k)
+                Push sb, " "
+                Push sb, Pretty(node("rhs"), indentLength, indentLevel + 1)
+                Push sb, vbCrLf
+                Push sb, NewIndent(indentLevel - 1, indentLength)
+                Push sb, ")"
             Else
-                Call PushString(buf, pos, Pretty(node("lhs"), indentLength, indentLevel + 1))
-                Call PushString(buf, pos, " ")
-                Call PushString(buf, pos, OperatorMap(k))
-                Call PushString(buf, pos, " ")
-                Call PushString(buf, pos, Pretty(node("rhs"), indentLength, indentLevel + 1))
+                Push sb, Pretty(node("lhs"), indentLength, indentLevel + 1)
+                Push sb, " "
+                Push sb, OperatorMap(k)
+                Push sb, " "
+                Push sb, Pretty(node("rhs"), indentLength, indentLevel + 1)
             End If
         Case ND_FUNC
-            Call PushString(buf, pos, node("name"))
-            Call PushString(buf, pos, "(")
+            Push sb, node("name")
+            Push sb, "("
             Dim args_ As Collection
             Set args_ = node("args")
             If args_.Count = 0 Then
-                Call PushString(buf, pos, ")")
+                Push sb, ")"
             Else
-                Call PushString(buf, pos, vbCrLf)
+                Push sb, vbCrLf
                 Dim i As Long
                 For i = 1 To args_.Count
-                    Call PushString(buf, pos, NewIndent(indentLevel + 1, indentLength))
-                    Call PushString(buf, pos, Pretty(args_(i), indentLength, indentLevel + 1))
+                    Push sb, NewIndent(indentLevel + 1, indentLength)
+                    Push sb, Pretty(args_(i), indentLength, indentLevel + 1)
                     If i < args_.Count Then
-                        Call PushString(buf, pos, ",")
-                        Call PushString(buf, pos, vbCrLf)
+                        Push sb, ","
+                        Push sb, vbCrLf
                     End If
                 Next i
-                Call PushString(buf, pos, vbCrLf)
-                Call PushString(buf, pos, NewIndent(indentLevel, indentLength))
-                Call PushString(buf, pos, ")")
+                Push sb, vbCrLf
+                Push sb, NewIndent(indentLevel, indentLength)
+                Push sb, ")"
             End If
         Case Else
     End Select
 
-    Pretty = Mid(buf, 1, pos - 1)
+    Pretty = ToString(sb)
 End Function
 
 Private Function NewIndent(level As Long, length As Long) As String
@@ -466,23 +491,38 @@ Private Function NewIndent(level As Long, length As Long) As String
     NewIndent = Space(level * length)
 End Function
 
-Private Sub PushString(ByRef buf As String, start As Long, val As String)
-    Do While (Len(buf) - start) + 1 < Len(val)
-        Call DoubleBuffer(buf)
+Public Function NewStringBuffer(size As Long) As StringBuffer
+    If size > BUF_MAX Then
+        Debug.Print "Error: Requested buffer size (" & size & ") exceeds maximum allowed (" & BUF_MAX & " characters)."
+        End
+    End If
+    Dim sb As StringBuffer
+    sb.buf = String(size, vbNullChar)
+    sb.pos = 1
+    NewStringBuffer = sb
+End Function
+
+Public Sub Push(ByRef sb As StringBuffer, val As String)
+    Do While Len(val) > (Len(sb.buf) - sb.pos) + 1
+        DoubleBuffer sb
     Loop
-    Mid(buf, start) = val
-    start = start + Len(val)
+    Mid(sb.buf, sb.pos) = val
+    sb.pos = sb.pos + Len(val)
 End Sub
 
-Private Sub DoubleBuffer(ByRef buf As String)
+Private Sub DoubleBuffer(ByRef sb As StringBuffer)
     Dim curLen As Long
-    curLen = Len(buf)
+    curLen = Len(sb.buf)
     If curLen * 2 > BUF_MAX Then
         Debug.Print "error: The buffer has reached its maximum allowed size of " & BUF_MAX & " characters."
         End
     End If
     Dim newBuf As String
     newBuf = String(curLen * 2, vbNullChar)
-    Mid(newBuf, 1) = buf
-    buf = newBuf
+    Mid(newBuf, 1) = sb.buf
+    sb.buf = newBuf
 End Sub
+
+Public Function ToString(sb As StringBuffer) As String
+    ToString = Mid(sb.buf, 1, sb.pos - 1)
+End Function
