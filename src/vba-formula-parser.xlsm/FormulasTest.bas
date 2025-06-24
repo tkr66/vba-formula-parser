@@ -105,23 +105,83 @@ Sub TestParse()
 End Sub
 
 Sub TestPretty()
-    Dim tests As Variant
-    tests = Array( _
-        "(ab+cd)*3", _
-        "(((((1=2)<>3)<4)<=5)>6)>=7", _
-        "SUM(MIN(1, MAX(3, NOW(a))))", _
+    Dim tests As Collection
+    Set tests = New Collection
+    tests.Add Array( _
+        "test pretty simple addition", _
+        "1+2", _
+        "1 + 2" _
+    )
+    tests.Add Array( _
+        "test pretty parentheses", _
+        "(1+2)*3", _
+        "(" & vbCrLf & _
+        "  1 + 2" & vbCrLf & _
+        ") * 3" _
+    )
+    tests.Add Array( _
+        "test pretty function with args", _
+        "SUM(A, B)", _
+        "SUM(" & vbCrLf & _
+        "  A," & vbCrLf & _
+        "  B" & vbCrLf & _
+        ")" _
+    )
+    tests.Add Array( _
+        "test pretty nested function", _
+        "SUM(MIN(1, MAX(3, NOW())))", _
+        "SUM(" & vbCrLf & _
+        "  MIN(" & vbCrLf & _
+        "    1," & vbCrLf & _
+        "    MAX(" & vbCrLf & _
+        "      3," & vbCrLf & _
+        "      NOW()" & vbCrLf & _
+        "    )" & vbCrLf & _
+        "  )" & vbCrLf & _
+        ")" _
+    )
+    tests.Add Array( _
+        "test pretty string literal", _
+        """hello world""", _
+        """hello world""" _
+    )
+    tests.Add Array( _
+        "test pretty complex expression", _
         "IF(AND(1=1,MIN(x)=MAX(y)),NOW(),DATE(1990,1,1))", _
-        "CONCAT(""a"", ""b"")", _
-        "" _
+        "IF(" & vbCrLf & _
+        "  AND(" & vbCrLf & _
+        "    1 = 1," & vbCrLf & _
+        "    MIN(" & vbCrLf & _
+        "      x" & vbCrLf & _
+        "    ) = MAX(" & vbCrLf & _
+        "      y" & vbCrLf & _
+        "    )" & vbCrLf & _
+        "  )," & vbCrLf & _
+        "  NOW()," & vbCrLf & _
+        "  DATE(" & vbCrLf & _
+        "    1990," & vbCrLf & _
+        "    1," & vbCrLf & _
+        "    1" & vbCrLf & _
+        "  )" & vbCrLf & _
+        ")" _
     )
     Dim t As Variant
     For Each t In tests
-        If CStr(t) <> "" Then
-            Debug.Print t
-            Debug.Print Formulas.Pretty(Formulas.Parse(CStr(t)), 2)
-            Debug.Print
+        If IsArray(t) Then
+            Dim actualPretty As String
+            actualPretty = Formulas.Pretty(Formulas.Parse(CStr(t(1))), 2)
+            If actualPretty = CStr(t(2)) Then
+                Debug.Print "ok: " & t(0)
+            Else
+                Debug.Print "assert failed: " & t(0)
+                Debug.Print "  " & "input: " & t(1)
+                Debug.Print "  " & "left  == " & actualPretty
+                Debug.Print "  " & "right == " & t(2)
+                Debug.Print
+            End If
         End If
     Next t
+    Debug.Print
 End Sub
 
 Private Function Token(kind As TokenKind, val As String, col As Long) As Variant()
