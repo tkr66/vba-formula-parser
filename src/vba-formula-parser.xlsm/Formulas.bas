@@ -7,6 +7,7 @@ Public Enum TokenKind
     TK_PUNCT
     TK_IDENT
     TK_FUNCNAME
+    TK_STRING
 End Enum
 
 Public Enum NodeKind
@@ -23,6 +24,7 @@ Public Enum NodeKind
     ND_GT
     ND_GE
     ND_FUNC
+    ND_STRING
 End Enum
 
 Private Type Parser
@@ -43,6 +45,7 @@ Static Property Get TokenKindMap() As Dictionary
     TokenKindMap.Add TK_PUNCT, "TK_PUNCT"
     TokenKindMap.Add TK_IDENT, "TK_IDENT"
     TokenKindMap.Add TK_FUNCNAME, "TK_FUNCNAME"
+    TokenKindMap.Add TK_STRING, "TK_STRING"
 End Property
 
 Static Property Get NodeKindMap() As Dictionary
@@ -60,6 +63,7 @@ Static Property Get NodeKindMap() As Dictionary
     NodeKindMap.Add ND_GT, "ND_GT"
     NodeKindMap.Add ND_GE, "ND_GE"
     NodeKindMap.Add ND_FUNC, "ND_FUNC"
+    NodeKindMap.Add ND_STRING, "ND_STRING"
 End Property
 
 Static Property Get OperatorMap() As Dictionary
@@ -139,6 +143,21 @@ Public Function Tokenize(str As String) As Collection
                     End If
                 End If
                 expectFuncName = False
+            Case c = """"
+                start = i
+                i = i + 1
+                Do
+                    If i > Len(str) Then
+                        ErrorAt Mid(str, start), "unclosed string literal"
+                    End If
+                    If Mid(str, i, 1) = """" Then
+                        Exit Do
+                    End If
+                    i = i + 1
+                Loop
+                ' the surrounding quotes are not needed.
+                toks.Add NewToken(TK_STRING, Mid(str, start + 1, i - start - 1), start)
+                i = i + 1
             Case c = "="
                 toks.Add NewToken(TK_PUNCT, c, i)
                 i = i + 1
@@ -230,6 +249,11 @@ End Function
 Private Function NewIdent(val As String) As Dictionary
     Set NewIdent = NewNode(ND_IDENT)
     NewIdent.Add "val", val
+End Function
+
+Private Function NewString(val As String) As Dictionary
+    Set NewString = NewNode(ND_STRING)
+    NewString.Add "val", val
 End Function
 
 Private Function NewFunc(name_ As String, args_ As Collection) As Dictionary
@@ -366,7 +390,7 @@ Private Function Unary(p As Parser) As Dictionary
     End If
 End Function
 
-' <primary> ::= <num> | <ident> | <funcname> "(" <args>? ")" | "(" <expr> ")"
+' <primary> ::= <num> | <ident> | <string> | <funcname> "(" <args>? ")" | "(" <expr> ")"
 Private Function Primary(p As Parser) As Dictionary
     If Consume(p, "(") Then
         Dim node As Dictionary
@@ -388,6 +412,12 @@ Private Function Primary(p As Parser) As Dictionary
 
     If t(0) = TK_IDENT Then
         Set Primary = NewIdent(CStr(t(1)))
+        Advance p
+        Exit Function
+    End If
+
+    If t(0) = TK_STRING Then
+        Set Primary = NewString(CStr(t(1)))
         Advance p
         Exit Function
     End If
@@ -434,6 +464,10 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
     Select Case k
         Case ND_NUM, ND_IDENT
             Push sb, node("val")
+        Case ND_STRING
+            Push sb, Chr(34)
+            Push sb, node("val")
+            Push sb, Chr(34)
         Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
              ND_EQ, ND_NE, ND_LT, ND_LE, ND_GT, ND_GE
             If node("enclosed") Then
@@ -477,6 +511,10 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
                 Push sb, NewIndent(indentLevel, indentLength)
                 Push sb, ")"
             End If
+        Case ND_STRING
+            Push sb, Chr(34)
+            Push sb, node("val")
+            Push sb, Chr(34)
         Case Else
     End Select
 

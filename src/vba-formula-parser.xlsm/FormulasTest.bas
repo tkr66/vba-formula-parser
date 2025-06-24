@@ -53,6 +53,12 @@ Sub TestTokenize()
                 Token(TK_PUNCT, ")", 25), _
             Token(TK_PUNCT, ")", 26) _
         )))
+    tests.Add Array( _
+        "test tokenize string literas", _
+        """a b c""", _
+        Stringify(Array( _
+            Token(TK_STRING, "a b c", 1) _
+        )))
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
@@ -86,6 +92,7 @@ Sub TestParse()
         "SUM(1,2)", _
         "SUM.1(MIN(a))", _
         "IF(AND(1=1,MIN(x)=MAX(y)),NOW(),DATE(1990,1,1))", _
+        """a b c""", _
         "" _
     )
     Dim t As Variant
@@ -104,6 +111,7 @@ Sub TestPretty()
         "(((((1=2)<>3)<4)<=5)>6)>=7", _
         "SUM(MIN(1, MAX(3, NOW(a))))", _
         "IF(AND(1=1,MIN(x)=MAX(y)),NOW(),DATE(1990,1,1))", _
+        "CONCAT(""a"", ""b"")", _
         "" _
     )
     Dim t As Variant
@@ -170,6 +178,9 @@ Private Sub DumpNode(node As Dictionary, indentLevel As Long)
             For Each x In node("args")
                 Call DumpNode(x, indentLevel + 1)
             Next x
+        Case Formulas.NodeKind.ND_STRING
+            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "val: " & Chr(34) & node("val") & Chr(34)
     End Select
     If indentLevel = 0 Then
         Debug.Print
