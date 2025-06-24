@@ -237,6 +237,24 @@ Sub TestPretty()
         "  )" & vbCrLf & _
         ")" _
     )
+    tests.Add Array( _
+        "test pretty simple array", _
+        "{1,2}", _
+        "{" & vbCrLf & _
+        "  1, 2" & vbCrLf & _
+        "}" _
+    )
+    tests.Add Array( _
+        "test pretty array", _
+        "{1,2;""3"",""4"";TRUE,FALSE}*{2,2}", _
+        "{" & vbCrLf & _
+        "  1, 2;" & vbCrLf & _
+        "  ""3"", ""4"";" & vbCrLf & _
+        "  TRUE, FALSE" & vbCrLf & _
+        "} * {" & vbCrLf & _
+        "  2, 2" & vbCrLf & _
+        "}" _
+    )
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
@@ -318,10 +336,17 @@ Private Sub DumpNode(node As Dictionary, indentLevel As Long)
         Case Formulas.NodeKind.ND_ARRAY
             Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
             Debug.Print prefix & "- " & "elements:"
-            Dim elem As Dictionary
-            For Each elem In node("elements")
-                DumpNode elem, indentLevel + 1
-            Next elem
+            Dim r As Dictionary
+            For Each r In node("elements")
+                DumpNode r, indentLevel + 1
+            Next r
+        Case Formulas.NodeKind.ND_ARRAY_ROW
+            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "elements:"
+            Dim c As Dictionary
+            For Each c In node("elements")
+                DumpNode c, indentLevel
+            Next c
     End Select
     If indentLevel = 0 Then
         Debug.Print

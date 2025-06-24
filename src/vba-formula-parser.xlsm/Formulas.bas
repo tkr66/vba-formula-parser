@@ -33,6 +33,7 @@ Public Enum NodeKind
     ND_STRING
     ND_CONCAT
     ND_ARRAY
+    ND_ARRAY_ROW
 End Enum
 
 Private Type Parser
@@ -74,6 +75,7 @@ Static Property Get NodeKindMap() As Dictionary
     NodeKindMap.Add ND_STRING, "ND_STRING"
     NodeKindMap.Add ND_CONCAT, "ND_CONCAT"
     NodeKindMap.Add ND_ARRAY, "ND_ARRAY"
+    NodeKindMap.Add ND_ARRAY_ROW, "ND_ARRAY_ROW"
 End Property
 
 Static Property Get OperatorMap() As Dictionary
@@ -284,6 +286,11 @@ Private Function NewArray(elems As Collection) As Dictionary
     NewArray.Add "elements", elems
 End Function
 
+Private Function NewArrayRow(elems As Collection) As Dictionary
+    Set NewArrayRow = NewNode(ND_ARRAY_ROW)
+    NewArrayRow.Add "elements", elems
+End Function
+
 Private Sub Advance(p As Parser)
     p.pos = p.pos + 1
 End Sub
@@ -445,7 +452,7 @@ Private Function Unary(p As Parser) As Dictionary
     End If
 End Function
 
-' <primary> ::= <num> | <ident> | <string> | "{" <constants> "}" | <funcname> "(" <args>? ")" | "(" <expr> ")"
+' <primary> ::= <num> | <ident> | <string> | "{" <array_rows> "}" | <funcname> "(" <args>? ")" | "(" <expr> ")"
 Private Function Primary(p As Parser) As Dictionary
     If Consume(p, "(") Then
         Dim node As Dictionary
@@ -457,10 +464,10 @@ Private Function Primary(p As Parser) As Dictionary
     End If
 
     If Consume(p, "{") Then
-        Dim elems As Collection
-        Set elems = Constants(p)
+        Dim r As Collection
+        Set r = ArrayRows(p)
         Expect p, "}"
-        Set Primary = NewArray(elems)
+        Set Primary = NewArray(r)
         Exit Function
     End If
 
@@ -498,21 +505,34 @@ Private Function Primary(p As Parser) As Dictionary
     ErrorAt2 p, "expected a number or an ident or an expression"
 End Function
 
-' <constants> ::= <constant> (("," | ";") <constant>)*
-Private Function Constants(p As Parser) As Collection
+' <array_rows> ::= <array_row> (";" <array_row>)*
+Private Function ArrayRows(p As Parser) As Collection
+    Dim c As Collection
+    Set c = New Collection
+    c.Add ArrayRow(p)
+    Do While HasNext(p)
+        If Consume(p, ";") Then
+            c.Add ArrayRow(p)
+        Else
+            Exit Do
+        End If
+    Loop
+    Set ArrayRows = c
+End Function
+
+' <array_row> ::= <constant> (","  <constant>)*
+Private Function ArrayRow(p As Parser) As Dictionary
     Dim c As Collection
     Set c = New Collection
     c.Add Constant(p)
     Do While HasNext(p)
         If Consume(p, ",") Then
             c.Add Constant(p)
-        ElseIf Consume(p, ";") Then
-            c.Add Constant(p)
         Else
             Exit Do
         End If
     Loop
-    Set Constants = c
+    Set ArrayRow = NewArrayRow(c)
 End Function
 
 ' <constant> ::= <num> | <string> | "TRUE" | "FALSE"
@@ -555,6 +575,7 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
     Dim k As NodeKind
     sb = NewStringBuffer(256)
     k = node("kind")
+    Dim i As Long
     Select Case k
         Case ND_NUM, ND_IDENT
             Push sb, node("val")
@@ -593,7 +614,6 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
                 Push sb, ")"
             Else
                 Push sb, vbCrLf
-                Dim i As Long
                 For i = 1 To args_.Count
                     Push sb, NewIndent(indentLevel + 1, indentLength)
                     Push sb, Pretty(args_(i), indentLength, indentLevel + 1)
@@ -610,6 +630,32 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
             Push sb, Chr(34)
             Push sb, node("val")
             Push sb, Chr(34)
+        Case ND_ARRAY
+            Push sb, "{"
+            Push sb, vbCrLf
+            Dim rows_ As Collection
+            Set rows_ = node("elements")
+            For i = 1 To rows_.Count
+                Push sb, NewIndent(indentLevel + 1, indentLength)
+                Push sb, Pretty(rows_(i), indentLength + 1, indentLevel)
+                If i < rows_.Count Then
+                    Push sb, ";"
+                    Push sb, vbCrLf
+                End If
+            Next i
+            Push sb, vbCrLf
+            Push sb, NewIndent(indentLevel - 1, indentLength)
+            Push sb, "}"
+        Case ND_ARRAY_ROW
+            Dim cols As Collection
+            Set cols = node("elements")
+            For i = 1 To cols.Count
+                Push sb, Pretty(cols(i), indentLength, indentLevel)
+                If i < cols.Count Then
+                    Push sb, ","
+                    Push sb, " "
+                End If
+            Next i
         Case Else
     End Select
 
