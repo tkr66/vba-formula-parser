@@ -1,6 +1,11 @@
 Attribute VB_Name = "FormulasTest"
 Option Explicit
 
+Sub TestAll()
+    TestTokenize
+    TestPretty
+End Sub
+
 Sub TestTokenize()
     Dim tests As Collection
     Set tests = New Collection
