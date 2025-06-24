@@ -245,6 +245,17 @@ Sub TestPretty()
         "}" _
     )
     tests.Add Array( _
+        "test pretty function with omitted args", _
+        "SUM(1,,2,,)", _
+        "SUM(" & vbCrLf & _
+        "  1," & vbCrLf & _
+        "  ," & vbCrLf & _
+        "  2," & vbCrLf & _
+        "  ," & vbCrLf & _
+        "  " & vbCrLf & _
+        ")" _
+    )
+    tests.Add Array( _
         "test pretty array", _
         "{1,2;""3"",""4"";TRUE,FALSE}*{2,2}", _
         "{" & vbCrLf & _

@@ -34,6 +34,7 @@ Public Enum NodeKind
     ND_CONCAT
     ND_ARRAY
     ND_ARRAY_ROW
+    ND_EMPTY
 End Enum
 
 Private Type Parser
@@ -271,6 +272,10 @@ Private Function NewArrayRow(elems As Collection) As Dictionary
     NewArrayRow.Add "elements", elems
 End Function
 
+Private Function NewEmpty() As Dictionary
+    Set NewEmpty = NewNode(ND_EMPTY)
+End Function
+
 Private Sub Advance(p As Parser)
     p.pos = p.pos + 1
 End Sub
@@ -298,6 +303,13 @@ Private Function NextToken(p As Parser) As Token
     tok.pos = t(2)
 
     NextToken = tok
+End Function
+
+Private Function Peek(p As Parser) As Token
+    Dim t As Token
+    t = NextToken(p)
+    Rewind p
+    Peek = t
 End Function
 
 Private Function Consume(p As Parser, prefix As String) As Boolean
@@ -538,13 +550,22 @@ Private Function Constant(p As Parser) As Dictionary
     ErrorAt2 p, "expected a costant value"
 End Function
 
-' <args> ::= <expr> ("," <expr>)*
+' <args> ::= <expr> ("," <expr>?)*
 Private Function Args(p As Parser) As Collection
     Dim c As Collection
     Set c = New Collection
     c.Add Expr(p)
     Do While Consume(p, ",")
-        c.Add Expr(p)
+        Dim t As Token
+        t = Peek(p)
+        If t.kind = TK_PUNCT And t.val = "," Then
+            c.Add NewEmpty()
+        ElseIf t.kind = TK_PUNCT And t.val = ")" Then
+            c.Add NewEmpty()
+            Exit Do
+        Else
+            c.Add Expr(p)
+        End If
     Loop
 
     Set Args = c
@@ -636,6 +657,8 @@ Public Function Pretty(node As Dictionary, indentLength As Long, Optional indent
                     Push sb, " "
                 End If
             Next i
+        Case ND_EMPTY
+            Push sb, ""
         Case Else
     End Select
 
