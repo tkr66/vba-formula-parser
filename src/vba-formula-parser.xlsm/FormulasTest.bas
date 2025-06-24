@@ -89,6 +89,30 @@ Sub TestTokenize()
             Token(TK_PUNCT, "(", 15), _
             Token(TK_PUNCT, ")", 16) _
     )))
+    tests.Add Array( _
+        "test tokenize array", _
+        "{1,2;""3"",""4"";TRUE,FALSE}*{2,2}", _
+        Stringify(Array( _
+            Token(TK_PUNCT, "{", 1), _
+            Token(TK_NUM, "1", 2), _
+            Token(TK_PUNCT, ",", 3), _
+            Token(TK_NUM, "2", 4), _
+            Token(TK_PUNCT, ";", 5), _
+            Token(TK_STRING, "3", 6), _
+            Token(TK_PUNCT, ",", 9), _
+            Token(TK_STRING, "4", 10), _
+            Token(TK_PUNCT, ";", 13), _
+            Token(TK_IDENT, "TRUE", 14), _
+            Token(TK_PUNCT, ",", 18), _
+            Token(TK_IDENT, "FALSE", 19), _
+            Token(TK_PUNCT, "}", 24), _
+            Token(TK_PUNCT, "*", 25), _
+            Token(TK_PUNCT, "{", 26), _
+            Token(TK_NUM, "2", 27), _
+            Token(TK_PUNCT, ",", 28), _
+            Token(TK_NUM, "2", 29), _
+            Token(TK_PUNCT, "}", 30) _
+        )))
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
@@ -124,6 +148,7 @@ Sub TestParse()
         "IF(AND(1=1,MIN(x)=MAX(y)),NOW(),DATE(1990,1,1))", _
         """a b c""", _
         "(+1&""abc"")&NOW()", _
+        "{1,2;""3"",""4"";TRUE,FALSE}*{2,2}", _
         "" _
     )
     Dim t As Variant
@@ -290,6 +315,13 @@ Private Sub DumpNode(node As Dictionary, indentLevel As Long)
         Case Formulas.NodeKind.ND_STRING
             Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
             Debug.Print prefix & "- " & "val: " & Chr(34) & node("val") & Chr(34)
+        Case Formulas.NodeKind.ND_ARRAY
+            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "elements:"
+            Dim elem As Dictionary
+            For Each elem In node("elements")
+                DumpNode elem, indentLevel + 1
+            Next elem
     End Select
     If indentLevel = 0 Then
         Debug.Print

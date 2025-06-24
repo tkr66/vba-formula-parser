@@ -32,6 +32,7 @@ Public Enum NodeKind
     ND_FUNC
     ND_STRING
     ND_CONCAT
+    ND_ARRAY
 End Enum
 
 Private Type Parser
@@ -72,6 +73,7 @@ Static Property Get NodeKindMap() As Dictionary
     NodeKindMap.Add ND_FUNC, "ND_FUNC"
     NodeKindMap.Add ND_STRING, "ND_STRING"
     NodeKindMap.Add ND_CONCAT, "ND_CONCAT"
+    NodeKindMap.Add ND_ARRAY, "ND_ARRAY"
 End Property
 
 Static Property Get OperatorMap() As Dictionary
@@ -111,10 +113,13 @@ Public Function Tokenize(str As String) As Collection
             Case c = "+" Or c = "-" Or c = "*" Or c = "/"
                 toks.Add NewToken(TK_PUNCT, c, i)
                 i = i + 1
-            Case c = "(" Or c = ")"
+            Case c = "(" Or c = ")" Or c = "{" Or c = "}"
                 toks.Add NewToken(TK_PUNCT, c, i)
                 i = i + 1
             Case c = ","
+                toks.Add NewToken(TK_PUNCT, c, i)
+                i = i + 1
+            Case c = ";"
                 toks.Add NewToken(TK_PUNCT, c, i)
                 i = i + 1
             Case c = "."
@@ -272,6 +277,11 @@ Private Function NewFunc(name_ As String, args_ As Collection) As Dictionary
     Set NewFunc = NewNode(ND_FUNC)
     NewFunc.Add "name", name_
     NewFunc.Add "args", args_
+End Function
+
+Private Function NewArray(elems As Collection) As Dictionary
+    Set NewArray = NewNode(ND_ARRAY)
+    NewArray.Add "elements", elems
 End Function
 
 Private Sub Advance(p As Parser)
@@ -435,7 +445,7 @@ Private Function Unary(p As Parser) As Dictionary
     End If
 End Function
 
-' <primary> ::= <num> | <ident> | <string> | <funcname> "(" <args>? ")" | "(" <expr> ")"
+' <primary> ::= <num> | <ident> | <string> | "{" <constants> "}" | <funcname> "(" <args>? ")" | "(" <expr> ")"
 Private Function Primary(p As Parser) As Dictionary
     If Consume(p, "(") Then
         Dim node As Dictionary
@@ -443,6 +453,14 @@ Private Function Primary(p As Parser) As Dictionary
         Expect p, ")"
         node("enclosed") = True
         Set Primary = node
+        Exit Function
+    End If
+
+    If Consume(p, "{") Then
+        Dim elems As Collection
+        Set elems = Constants(p)
+        Expect p, "}"
+        Set Primary = NewArray(elems)
         Exit Function
     End If
 
@@ -478,6 +496,46 @@ Private Function Primary(p As Parser) As Dictionary
     End If
 
     ErrorAt2 p, "expected a number or an ident or an expression"
+End Function
+
+' <constants> ::= <constant> (("," | ";") <constant>)*
+Private Function Constants(p As Parser) As Collection
+    Dim c As Collection
+    Set c = New Collection
+    c.Add Constant(p)
+    Do While HasNext(p)
+        If Consume(p, ",") Then
+            c.Add Constant(p)
+        ElseIf Consume(p, ";") Then
+            c.Add Constant(p)
+        Else
+            Exit Do
+        End If
+    Loop
+    Set Constants = c
+End Function
+
+' <constant> ::= <num> | <string> | "TRUE" | "FALSE"
+Private Function Constant(p As Parser) As Dictionary
+    Dim t As Token
+    t = NextToken(p)
+
+    If t.kind = TK_NUM Then
+        Set Constant = NewNum(CLng(t.val))
+        Exit Function
+    End If
+
+    If t.kind = TK_STRING Then
+        Set Constant = NewString(CStr(t.val))
+        Exit Function
+    End If
+
+    If t.kind = TK_IDENT And (t.val = "TRUE" Or t.val = "FALSE") Then
+        Set Constant = NewIdent(CStr(t.val))
+        Exit Function
+    End If
+
+    ErrorAt2 p, "expected a costant value"
 End Function
 
 ' <args> ::= <expr> ("," <expr>)*
