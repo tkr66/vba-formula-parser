@@ -118,7 +118,7 @@ Public Function Tokenize(str As String) As Collection
         Dim c As String
         c = Mid(str, i, 1)
         Select Case True
-            Case c = " "
+            Case IsWhitespace(c)
                 i = i + 1
             Case IsNumeric(c)
                 start = i
@@ -199,6 +199,10 @@ End Function
 
 Private Function NewToken(kind As Long, val As String, col As Long) As Variant()
     NewToken = Array(kind, val, col)
+End Function
+
+Private Function IsWhitespace(c As String) As Boolean
+    IsWhitespace = (c = " ") Or (c = vbCr) Or (c = vbLf)
 End Function
 
 Private Function IsIdent(c As String) As Boolean
