@@ -709,7 +709,7 @@ Private Function Pretty(node As Dictionary, fmt As Formatter) As String
                 End If
             Next i
             Push sb, fmt.newLine
-            Push sb, PrevIndent(fmt)
+            Push sb, CurrentIndent(fmt)
             Push sb, "}"
         Case ND_ARRAY_ROW
             Dim cols As Collection
