@@ -14,6 +14,7 @@ Public Enum TokenKind
     TK_IDENT
     TK_FUNCNAME
     TK_STRING
+    TK_REF
 End Enum
 
 Private Type Token
@@ -41,6 +42,8 @@ Public Enum NodeKind
     ND_ARRAY
     ND_ARRAY_ROW
     ND_EMPTY
+    ND_REF
+    ND_RANGE
 End Enum
 
 Private Type Parser
@@ -68,6 +71,11 @@ End Type
 
 Private Const BUF_MAX As Long = 16384
 
+Private Const MAX_ROW As Long = 1048576
+Private Const MAX_ROW_LENGTH As Long = 7
+Private Const MAX_COLUMN As Long = 16384
+Private Const MAX_COLUMN_LENGTH As Long = 3 ' XFD
+
 Private Static Property Get TokenKindMap() As Dictionary
     Dim m As Dictionary
     If m Is Nothing Then
@@ -77,6 +85,7 @@ Private Static Property Get TokenKindMap() As Dictionary
         m.Add TK_IDENT, "TK_IDENT"
         m.Add TK_FUNCNAME, "TK_FUNCNAME"
         m.Add TK_STRING, "TK_STRING"
+        m.Add TK_REF, "TK_REF"
     End If
     Set TokenKindMap = m
 End Property
@@ -102,6 +111,8 @@ Private Static Property Get NodeKindMap() As Dictionary
         m.Add ND_CONCAT, "ND_CONCAT"
         m.Add ND_ARRAY, "ND_ARRAY"
         m.Add ND_ARRAY_ROW, "ND_ARRAY_ROW"
+        m.Add ND_REF, "ND_REF"
+        m.Add ND_RANGE, "ND_RANGE"
     End If
     Set NodeKindMap = m
 End Property
@@ -121,6 +132,7 @@ Private Static Property Get OperatorMap() As Dictionary
         m.Add ND_GT, ">"
         m.Add ND_GE, ">="
         m.Add ND_CONCAT, "&"
+        m.Add ND_RANGE, ":"
     End If
     Set OperatorMap = m
 End Property
@@ -203,6 +215,9 @@ Private Function Tokenizer_NextToken(t As Tokenizer) As Variant()
         Case c = ";"
             Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
             t.pos = t.pos + 1
+        Case c = ":"
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
         Case c = "."
             Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
             t.pos = t.pos + 1
@@ -214,7 +229,13 @@ Private Function Tokenizer_NextToken(t As Tokenizer) As Variant()
             If Mid(t.input, t.pos, 1) = "(" Then
                 Tokenizer_NextToken = NewToken(TK_FUNCNAME, Tokenizer_Capture(t), t.mark)
             Else
-                Tokenizer_NextToken = NewToken(TK_IDENT, Tokenizer_Capture(t), t.mark)
+                Dim addrOrIdent As String
+                addrOrIdent = Tokenizer_Capture(t)
+                If IsAddress(addrOrIdent) Then
+                    Tokenizer_NextToken = NewToken(TK_REF, addrOrIdent, t.mark)
+                Else
+                    Tokenizer_NextToken = NewToken(TK_IDENT, addrOrIdent, t.mark)
+                End If
             End If
         Case c = """"
             Tokenizer_Mark t
@@ -271,7 +292,92 @@ Private Function IsIdent(c As String) As Boolean
     End If
     Dim dec As Long
     dec = Asc(c)
-    IsIdent = (97 <= dec And dec <= 122) Or (65 <= dec And dec <= 90) Or c = "_" Or c = "\" Or c = "."
+    IsIdent = (IsAlpha(c) Or c = "_" Or c = "\" Or c = ".")
+End Function
+
+Private Function IsAlpha(c As String) As Boolean
+    Dim dec As Long
+    dec = Asc(c)
+    IsAlpha = (65 <= dec And dec <= 90) Or (97 <= dec And dec <= 122)
+End Function
+
+Private Function IsAddress(s As String) As Boolean
+    If Len(s) > MAX_COLUMN_LENGTH + MAX_ROW_LENGTH Then
+        IsAddress = False
+        Exit Function
+    End If
+
+    Dim sb As StringBuffer
+    sb = NewStringBuffer(10)
+    Dim i As Long
+    i = 1
+    Do While IsAlpha(Mid(s, i, 1))
+        Push sb, Mid(s, i, 1)
+        If i > MAX_COLUMN_LENGTH Then
+            IsAddress = False
+            Exit Function
+        End If
+        i = i + 1
+        ' row part not found
+        If i > Len(s) Then
+            IsAddress = False
+            Exit Function
+        End If
+    Loop
+    If Not IsColumnAlpha(ToString(sb)) Then
+        IsAddress = False
+        Exit Function
+    End If
+
+    If Len(Mid(s, i)) > MAX_ROW_LENGTH Then
+        IsAddress = False
+        Exit Function
+    End If
+    If Not IsNumeric(Mid(s, i)) Then
+        IsAddress = False
+        Exit Function
+    End If
+    If CLng(Mid(s, i)) > MAX_ROW Then
+        IsAddress = False
+        Exit Function
+    End If
+
+    IsAddress = True
+End Function
+
+Private Function IsColumnAlpha(s As String) As Boolean
+    If Len(s) > MAX_COLUMN_LENGTH Then
+        IsColumnAlpha = False
+        Exit Function
+    End If
+    Dim i As Long
+    For i = 1 To Len(s)
+        If Not IsAlpha(Mid(s, i, 1)) Then
+            IsColumnAlpha = False
+            Exit Function
+        End If
+    Next i
+
+    IsColumnAlpha = (ToColumn(s) <= MAX_COLUMN)
+End Function
+
+' A~Z
+' A = 1
+' AA = 27
+' AAA = 703 (26^2)*1 + (26^1)*1 + (26^0)*1
+Private Function ToColumn(s As String) As Long
+    Dim result As Long
+    result = 0
+    Dim i As Long
+    For i = 1 To Len(s)
+        Dim pow As Long
+        pow = Len(s) - i
+        Dim n As Long
+        n = Asc(UCase$(Mid(s, i, 1))) - (Asc("A") - 1)
+        result = result + (26 ^ pow) * n
+    Next i
+
+    ToColumn = result
 End Function
 
 Private Sub ErrorAt(t As Tokenizer, msg As String)
@@ -351,6 +457,11 @@ End Function
 
 Private Function NewEmpty() As Dictionary
     Set NewEmpty = NewNode(ND_EMPTY)
+End Function
+
+Private Function NewRef(val As String) As Dictionary
+    Set NewRef = NewNode(ND_REF)
+    NewRef.Add "val", val
 End Function
 
 Private Sub Advance(p As Parser)
@@ -521,7 +632,7 @@ Private Function Unary(p As Parser) As Dictionary
     End If
 End Function
 
-' <primary> ::= <num> | <ident> | <string> | "{" <array_rows> "}" | <funcname> "(" <args>? ")" | "(" <expr> ")"
+' <primary> ::= <num> | <ident> | <string> | "{" <array_rows> "}" | <funcname> "(" <args>? ")" | "(" <expr> ")" | <refs>
 Private Function Primary(p As Parser) As Dictionary
     If Consume(p, "(") Then
         Dim node As Dictionary
@@ -568,6 +679,17 @@ Private Function Primary(p As Parser) As Dictionary
             Expect p, ")"
         End If
         Set Primary = NewFunc(CStr(t.val), args_)
+        Exit Function
+    End If
+
+    If t.kind = TK_REF Then
+        Dim refs_ As Dictionary
+        Set refs_ = NewRef(CStr(t.val))
+        Do While Consume(p, ":")
+            t = NextToken(p)
+            Set refs_ = NewBinary(ND_RANGE, refs_, NewRef(CStr(t.val)))
+        Loop
+        Set Primary = refs_
         Exit Function
     End If
 
@@ -702,28 +824,37 @@ Private Function Format(node As Dictionary, fmt As Formatter) As String
     k = node("kind")
     Dim i As Long
     Select Case k
-        Case ND_NUM, ND_IDENT, ND_STRING
+        Case ND_NUM, ND_IDENT, ND_STRING, ND_REF
             Push sb, node("val")
         Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
              ND_EQ, ND_NE, ND_LT, ND_LE, ND_GT, ND_GE, _
-             ND_CONCAT
+             ND_CONCAT, _
+             ND_RANGE
             If node("enclosed") Then
                 Push sb, "("
                 Push sb, fmt.newLine
                 Push sb, NextIndent(fmt)
                 Push sb, Format(node("lhs"), UpIndent(fmt))
-                Push sb, " "
-                Push sb, OperatorMap(k)
-                Push sb, " "
+                If k = ND_RANGE Then
+                    Push sb, OperatorMap(k)
+                Else
+                    Push sb, " "
+                    Push sb, OperatorMap(k)
+                    Push sb, " "
+                End If
                 Push sb, Format(node("rhs"), UpIndent(fmt))
                 Push sb, fmt.newLine
                 Push sb, CurrentIndent(fmt)
                 Push sb, ")"
             Else
                 Push sb, Format(node("lhs"), fmt)
-                Push sb, " "
-                Push sb, OperatorMap(k)
-                Push sb, " "
+                If k = ND_RANGE Then
+                    Push sb, OperatorMap(k)
+                Else
+                    Push sb, " "
+                    Push sb, OperatorMap(k)
+                    Push sb, " "
+                End If
                 Push sb, Format(node("rhs"), fmt)
             End If
         Case ND_FUNC
@@ -794,7 +925,7 @@ Private Function ToJson(ast As Dictionary, fmt As Formatter) As String
     Push sb, fmt.newLine
     Push sb, NextIndent(fmt)
     Select Case ast("kind")
-        Case ND_NUM, ND_STRING
+        Case ND_NUM, ND_STRING, ND_REF
             Push sb, """val"": "
             Push sb, ast("val")
         Case ND_IDENT
@@ -803,7 +934,8 @@ Private Function ToJson(ast As Dictionary, fmt As Formatter) As String
         Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
              ND_EQ, ND_NE, _
              ND_LT, ND_LE, ND_GT, ND_GE, _
-             ND_CONCAT
+             ND_CONCAT, _
+             ND_RANGE
             Push sb, """lhs"": "
             Push sb, ToJson(ast("lhs"), UpIndent(fmt))
             Push sb, ","

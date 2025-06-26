@@ -113,6 +113,17 @@ Sub TestTokenize()
             Token(TK_NUM, "2", 29), _
             Token(TK_PUNCT, "}", 30) _
         )))
+    tests.Add Array( _
+        "tokenize address and ident", _
+        "a1 A1 XFD1 XFE1 A1048576 A1048577", _
+        Stringify(Array( _
+            Token(TK_REF, "a1", 1), _
+            Token(TK_REF, "A1", 4), _
+            Token(TK_REF, "XFD1", 7), _
+            Token(TK_IDENT, "XFE1", 12), _
+            Token(TK_REF, "A1048576", 17), _
+            Token(TK_IDENT, "A1048577", 26) _
+        )))
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
@@ -192,10 +203,13 @@ Sub TestPretty()
     )
     tests.Add Array( _
         "pretty function with args", _
-        "=SUM(A, B)", _
+        "=SUM(A1, B1:C1, (D1:E1:F1))", _
         "SUM(" & vbCrLf & _
-        "  A," & vbCrLf & _
-        "  B" & vbCrLf & _
+        "  A1," & vbCrLf & _
+        "  B1:C1," & vbCrLf & _
+        "  (" & vbCrLf & _
+        "    D1:E1:F1" & vbCrLf & _
+        "  )" & vbCrLf & _
         ")" _
     )
     tests.Add Array( _
