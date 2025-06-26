@@ -72,7 +72,7 @@ Sub TestTokenize()
         "tokenize string literas", _
         """a b c""", _
         Stringify(Array( _
-            Token(TK_STRING, "a b c", 1) _
+            Token(TK_STRING, """a b c""", 1) _
         )))
     tests.Add Array( _
         "tokenize concatenation", _
@@ -82,7 +82,7 @@ Sub TestTokenize()
             Token(TK_PUNCT, "+", 2), _
             Token(TK_NUM, "1", 3), _
             Token(TK_PUNCT, "&", 4), _
-            Token(TK_STRING, "abc", 5), _
+            Token(TK_STRING, """abc""", 5), _
             Token(TK_PUNCT, ")", 10), _
             Token(TK_PUNCT, "&", 11), _
             Token(TK_FUNCNAME, "NOW", 12), _
@@ -98,9 +98,9 @@ Sub TestTokenize()
             Token(TK_PUNCT, ",", 3), _
             Token(TK_NUM, "2", 4), _
             Token(TK_PUNCT, ";", 5), _
-            Token(TK_STRING, "3", 6), _
+            Token(TK_STRING, """3""", 6), _
             Token(TK_PUNCT, ",", 9), _
-            Token(TK_STRING, "4", 10), _
+            Token(TK_STRING, """4""", 10), _
             Token(TK_PUNCT, ";", 13), _
             Token(TK_IDENT, "TRUE", 14), _
             Token(TK_PUNCT, ",", 18), _

@@ -2,6 +2,12 @@ Attribute VB_Name = "Formulas"
 Option Explicit
 
 Private input_ As String
+Private Type Tokenizer
+    input As String
+    pos As Long
+    mark As Long
+End Type
+
 Public Enum TokenKind
     TK_NUM
     TK_PUNCT
@@ -108,93 +114,134 @@ Static Property Get OperatorMap() As Dictionary
 End Property
 
 Public Function Tokenize(str As String) As Collection
-    input_ = str
+    input_ = Replace(Replace(str, vbCr, " "), vbLf, " ")
+    Dim t As Tokenizer
+    t.input = input_
+    t.pos = 1
+    t.mark = 0
+
     Dim toks As Collection
     Set toks = New Collection
-    Dim start As Long
-    Dim i As Long
-    i = 1
-    Do While i <= Len(str)
-        Dim c As String
-        c = Mid(str, i, 1)
-        Select Case True
-            Case IsWhitespace(c)
-                i = i + 1
-            Case IsNumeric(c)
-                start = i
-                Do
-                    i = i + 1
-                Loop While IsNumeric(Mid(str, i, 1))
-                toks.Add NewToken(TK_NUM, Mid(str, start, i - start), start)
-            Case c = "+" Or c = "-" Or c = "*" Or c = "/"
-                toks.Add NewToken(TK_PUNCT, c, i)
-                i = i + 1
-            Case c = "(" Or c = ")" Or c = "{" Or c = "}"
-                toks.Add NewToken(TK_PUNCT, c, i)
-                i = i + 1
-            Case c = ","
-                toks.Add NewToken(TK_PUNCT, c, i)
-                i = i + 1
-            Case c = ";"
-                toks.Add NewToken(TK_PUNCT, c, i)
-                i = i + 1
-            Case c = "."
-                toks.Add NewToken(TK_PUNCT, c, i)
-                i = i + 1
-            Case IsIdent(c)
-                Dim cur As String
-                start = i
-                Do
-                    i = i + 1
-                    cur = Mid(str, i, 1)
-                Loop While IsIdent(cur) Or IsNumeric(cur)
-                If Mid(str, i, 1) = "(" Then
-                    toks.Add NewToken(TK_FUNCNAME, Mid(str, start, i - start), start)
-                Else
-                    toks.Add NewToken(TK_IDENT, Mid(str, start, i - start), start)
-                End If
-            Case c = """"
-                start = i
-                i = i + 1
-                Do
-                    If i > Len(str) Then
-                        ErrorAt Mid(str, start), "unclosed string literal"
-                    End If
-                    If Mid(str, i, 1) = """" Then
-                        Exit Do
-                    End If
-                    i = i + 1
-                Loop
-                ' the surrounding quotes are not needed.
-                toks.Add NewToken(TK_STRING, Mid(str, start + 1, i - start - 1), start)
-                i = i + 1
-            Case c = "="
-                toks.Add NewToken(TK_PUNCT, c, i)
-                i = i + 1
-            Case c = "<"
-                If Mid(str, i + 1, 1) = ">" Or Mid(str, i + 1, 1) = "=" Then
-                    toks.Add NewToken(TK_PUNCT, Mid(str, i, 2), i)
-                    i = i + 2
-                Else
-                    toks.Add NewToken(TK_PUNCT, c, i)
-                    i = i + 1
-                End If
-            Case c = ">"
-                If Mid(str, i + 1, 1) = "=" Then
-                    toks.Add NewToken(TK_PUNCT, Mid(str, i, 2), i)
-                    i = i + 2
-                Else
-                    toks.Add NewToken(TK_PUNCT, c, i)
-                    i = i + 1
-                End If
-            Case c = "&"
-                toks.Add NewToken(TK_PUNCT, "&", i)
-                i = i + 1
-            Case Else
-                ErrorAt Mid(str, i), "unexpected token"
-        End Select
+    Do While Tokenizer_HasNext(t)
+        toks.Add Tokenizer_NextToken(t)
     Loop
+
     Set Tokenize = toks
+End Function
+
+Private Sub Tokenizer_Mark(t As Tokenizer)
+    t.mark = t.pos
+End Sub
+
+Private Function Tokenizer_Capture(t As Tokenizer) As String
+    Tokenizer_Capture = Mid(t.input, t.mark, t.pos - t.mark)
+End Function
+
+Private Function Tokenizer_HasNext(t As Tokenizer) As Boolean
+    Tokenizer_HasNext = (t.pos <= Len(t.input))
+End Function
+
+Private Function Tokenizer_Consume(t As Tokenizer, prefix As String) As Boolean
+    Dim n As Long
+    n = Len(prefix)
+    If Mid(t.input, t.pos, n) = prefix Then
+        t.pos = t.pos + n
+        Tokenizer_Consume = True
+        Exit Function
+    End If
+    Tokenizer_Consume = False
+End Function
+
+Private Function Tokenizer_ConsumeAny(t As Tokenizer, ParamArray prefixes() As Variant) As Boolean
+    Dim prefix As Variant
+    For Each prefix In prefixes
+        If Tokenizer_Consume(t, CStr(prefix)) Then
+            Tokenizer_ConsumeAny = True
+            Exit Function
+        End If
+    Next prefix
+    Tokenizer_ConsumeAny = False
+End Function
+
+Private Sub Tokenizer_SkipWhitespaces(t As Tokenizer)
+    Do While Tokenizer_ConsumeAny(t, " ", vbCrLf, vbLf)
+    Loop
+End Sub
+
+Private Function Tokenizer_NextToken(t As Tokenizer) As Variant()
+    Tokenizer_SkipWhitespaces t
+    Dim c As String
+    c = Mid(t.input, t.pos, 1)
+    Select Case True
+        Case IsNumeric(c)
+            Tokenizer_Mark t
+            Do
+                t.pos = t.pos + 1
+            Loop While IsNumeric(Mid(t.input, t.pos, 1))
+            Tokenizer_NextToken = NewToken(TK_NUM, Tokenizer_Capture(t), t.mark)
+        Case c = "+" Or c = "-" Or c = "*" Or c = "/"
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
+        Case c = "(" Or c = ")" Or c = "{" Or c = "}"
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
+        Case c = ","
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
+        Case c = ";"
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
+        Case c = "."
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
+        Case IsIdent(c)
+            Tokenizer_Mark t
+            Do
+                t.pos = t.pos + 1
+            Loop While IsIdent(Mid(t.input, t.pos, 1)) Or IsNumeric(Mid(t.input, t.pos, 1))
+            If Mid(t.input, t.pos, 1) = "(" Then
+                Tokenizer_NextToken = NewToken(TK_FUNCNAME, Tokenizer_Capture(t), t.mark)
+            Else
+                Tokenizer_NextToken = NewToken(TK_IDENT, Tokenizer_Capture(t), t.mark)
+            End If
+        Case c = """"
+            Tokenizer_Mark t
+            Do
+                t.pos = t.pos + 1
+                If Not Tokenizer_HasNext(t) Then
+                    ErrorAt t, "unclosed string literal"
+                End If
+                If Mid(t.input, t.pos, 1) = """" Then
+                    t.pos = t.pos + 1
+                    Exit Do
+                End If
+            Loop
+            Tokenizer_NextToken = NewToken(TK_STRING, Tokenizer_Capture(t), t.mark)
+        Case c = "="
+            Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+            t.pos = t.pos + 1
+        Case c = "<"
+            If Mid(t.input, t.pos + 1, 1) = ">" Or Mid(t.input, t.pos + 1, 1) = "=" Then
+                Tokenizer_NextToken = NewToken(TK_PUNCT, Mid(t.input, t.pos, 2), t.pos)
+                t.pos = t.pos + 2
+            Else
+                Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+                t.pos = t.pos + 1
+            End If
+        Case c = ">"
+            If Mid(t.input, t.pos + 1, 1) = "=" Then
+                Tokenizer_NextToken = NewToken(TK_PUNCT, Mid(t.input, t.pos, 2), t.pos)
+                t.pos = t.pos + 2
+            Else
+                Tokenizer_NextToken = NewToken(TK_PUNCT, c, t.pos)
+                t.pos = t.pos + 1
+            End If
+        Case c = "&"
+            Tokenizer_NextToken = NewToken(TK_PUNCT, "&", t.pos)
+            t.pos = t.pos + 1
+        Case Else
+            ErrorAt t, "unexpected token"
+    End Select
 End Function
 
 Private Function NewToken(kind As Long, val As String, col As Long) As Variant()
@@ -215,15 +262,13 @@ Private Function IsIdent(c As String) As Boolean
     IsIdent = (97 <= dec And dec <= 122) Or (65 <= dec And dec <= 90) Or c = "_" Or c = "\" Or c = "."
 End Function
 
-Private Sub ErrorAt(rest As String, msg As String)
-    Dim pos As Long
-    pos = Len(input_) - Len(rest)
+Private Sub ErrorAt(t As Tokenizer, msg As String)
     Dim prefix As String
     Dim m As String
     prefix = IndentString(NewIndentation(" ", 1, 4))
     m = m & "tokenize error:" & vbCrLf
-    m = m & prefix & input_ & vbCrLf
-    m = m & prefix & IndentString(NewIndentation(" ", 1, pos - 1)) & "^ " & msg
+    m = m & prefix & t.input & vbCrLf
+    m = m & prefix & IndentString(NewIndentation(" ", 1, t.pos - 1)) & "^ " & msg
     Err.Raise 5, Description:=m
 End Sub
 
@@ -646,12 +691,8 @@ Private Function Pretty(node As Dictionary, fmt As Formatter) As String
     k = node("kind")
     Dim i As Long
     Select Case k
-        Case ND_NUM, ND_IDENT
+        Case ND_NUM, ND_IDENT, ND_STRING
             Push sb, node("val")
-        Case ND_STRING
-            Push sb, Chr(34)
-            Push sb, node("val")
-            Push sb, Chr(34)
         Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
              ND_EQ, ND_NE, ND_LT, ND_LE, ND_GT, ND_GE, _
              ND_CONCAT
@@ -742,10 +783,10 @@ Private Function ToJson(ast As Dictionary, fmt As Formatter) As String
     Push sb, fmt.newLine
     Push sb, NextIndent(fmt)
     Select Case ast("kind")
-        Case ND_NUM
+        Case ND_NUM, ND_STRING
             Push sb, """val"": "
             Push sb, ast("val")
-        Case ND_IDENT, ND_STRING
+        Case ND_IDENT
             Push sb, """val"": "
             Push sb, Quote(ast("val"))
         Case ND_ADD, ND_SUB, ND_MUL, ND_DIV, _
