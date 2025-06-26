@@ -2,6 +2,30 @@
 
 A library to parse formulas
 
+## Examples
+
+Format
+
+```
+in:
+=CONCAT("R",MOD(ROW()-6,2)*2+1,"C",INT((ROW()-6)/2)*2+1)
+
+out:
+=CONCAT(
+  "R",
+  MOD(
+    ROW() - 6,
+    2
+  ) * 2 + 1,
+  "C",
+  INT(
+    (
+      ROW() - 6
+    ) / 2
+  ) * 2 + 1
+)
+```
+
 ## Installation
 
 Import Formulas.bas into your project
