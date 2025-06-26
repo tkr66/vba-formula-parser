@@ -336,22 +336,6 @@ Private Function Stringify(val As Variant) As String
     Stringify = JsonConverter.ConvertToJson(val)
 End Function
 
-Private Function TokenKindMap() As Dictionary
-    Set TokenKindMap = Formulas.TokenKindMap
-End Function
-
-Private Function NodeKindMap() As Dictionary
-    Set NodeKindMap = Formulas.NodeKindMap
-End Function
-
-Private Sub DumpTokens(toks As Collection)
-    Dim t As Variant
-    For Each t In toks
-        Debug.Print "kind: " & TokenKindMap(t(0)) & ", val: " & t(1)
-    Next t
-    Debug.Print
-End Sub
-
 Private Sub DumpNode(node As Dictionary, indentLevel As Long)
     Dim k As NodeKind
     k = node("kind")
@@ -364,19 +348,19 @@ Private Sub DumpNode(node As Dictionary, indentLevel As Long)
     End If
     Select Case k
         Case Formulas.NodeKind.ND_NUM, Formulas.NodeKind.ND_IDENT
-            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & k
             Debug.Print prefix & "- " & "val: " & node("val")
         Case Formulas.NodeKind.ND_ADD, Formulas.NodeKind.ND_SUB, Formulas.NodeKind.ND_MUL, Formulas.NodeKind.ND_DIV, _
              Formulas.NodeKind.ND_EQ, Formulas.NodeKind.ND_NE, _
              Formulas.NodeKind.ND_LT, Formulas.NodeKind.ND_LE, Formulas.NodeKind.ND_GT, Formulas.NodeKind.ND_GE, _
              Formulas.NodeKind.ND_CONCAT
-            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & k
             Debug.Print prefix & "lhs:"
             Call DumpNode(node("lhs"), indentLevel + 1)
             Debug.Print prefix & "rhs:"
             Call DumpNode(node("rhs"), indentLevel + 1)
         Case Formulas.NodeKind.ND_FUNC
-            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & k
             Debug.Print prefix & "- " & "name: " & node("name")
             Debug.Print prefix & "- " & "args:"
             Dim x As Dictionary
@@ -384,17 +368,17 @@ Private Sub DumpNode(node As Dictionary, indentLevel As Long)
                 Call DumpNode(x, indentLevel + 1)
             Next x
         Case Formulas.NodeKind.ND_STRING
-            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & k
             Debug.Print prefix & "- " & "val: " & Chr(34) & node("val") & Chr(34)
         Case Formulas.NodeKind.ND_ARRAY
-            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & k
             Debug.Print prefix & "- " & "elements:"
             Dim r As Dictionary
             For Each r In node("elements")
                 DumpNode r, indentLevel + 1
             Next r
         Case Formulas.NodeKind.ND_ARRAY_ROW
-            Debug.Print prefix & "- " & "kind: " & NodeKindMap(k)
+            Debug.Print prefix & "- " & "kind: " & k
             Debug.Print prefix & "- " & "elements:"
             Dim c As Dictionary
             For Each c In node("elements")

@@ -68,49 +68,61 @@ End Type
 
 Private Const BUF_MAX As Long = 16384
 
-Static Property Get TokenKindMap() As Dictionary
-    Set TokenKindMap = New Dictionary
-    TokenKindMap.Add TK_NUM, "TK_NUM"
-    TokenKindMap.Add TK_PUNCT, "TK_PUNCT"
-    TokenKindMap.Add TK_IDENT, "TK_IDENT"
-    TokenKindMap.Add TK_FUNCNAME, "TK_FUNCNAME"
-    TokenKindMap.Add TK_STRING, "TK_STRING"
+Private Static Property Get TokenKindMap() As Dictionary
+    Dim m As Dictionary
+    If m Is Nothing Then
+        Set m = New Dictionary
+        m.Add TK_NUM, "TK_NUM"
+        m.Add TK_PUNCT, "TK_PUNCT"
+        m.Add TK_IDENT, "TK_IDENT"
+        m.Add TK_FUNCNAME, "TK_FUNCNAME"
+        m.Add TK_STRING, "TK_STRING"
+    End If
+    Set TokenKindMap = m
 End Property
 
-Static Property Get NodeKindMap() As Dictionary
-    Set NodeKindMap = New Dictionary
-    NodeKindMap.Add ND_NUM, "ND_NUM"
-    NodeKindMap.Add ND_ADD, "ND_ADD"
-    NodeKindMap.Add ND_SUB, "ND_SUB"
-    NodeKindMap.Add ND_MUL, "ND_MUL"
-    NodeKindMap.Add ND_DIV, "ND_DIV"
-    NodeKindMap.Add ND_IDENT, "ND_IDENT"
-    NodeKindMap.Add ND_EQ, "ND_EQ"
-    NodeKindMap.Add ND_NE, "ND_NE"
-    NodeKindMap.Add ND_LT, "ND_LT"
-    NodeKindMap.Add ND_LE, "ND_LE"
-    NodeKindMap.Add ND_GT, "ND_GT"
-    NodeKindMap.Add ND_GE, "ND_GE"
-    NodeKindMap.Add ND_FUNC, "ND_FUNC"
-    NodeKindMap.Add ND_STRING, "ND_STRING"
-    NodeKindMap.Add ND_CONCAT, "ND_CONCAT"
-    NodeKindMap.Add ND_ARRAY, "ND_ARRAY"
-    NodeKindMap.Add ND_ARRAY_ROW, "ND_ARRAY_ROW"
+Private Static Property Get NodeKindMap() As Dictionary
+    Dim m As Dictionary
+    If m Is Nothing Then
+        Set m = New Dictionary
+        m.Add ND_NUM, "ND_NUM"
+        m.Add ND_ADD, "ND_ADD"
+        m.Add ND_SUB, "ND_SUB"
+        m.Add ND_MUL, "ND_MUL"
+        m.Add ND_DIV, "ND_DIV"
+        m.Add ND_IDENT, "ND_IDENT"
+        m.Add ND_EQ, "ND_EQ"
+        m.Add ND_NE, "ND_NE"
+        m.Add ND_LT, "ND_LT"
+        m.Add ND_LE, "ND_LE"
+        m.Add ND_GT, "ND_GT"
+        m.Add ND_GE, "ND_GE"
+        m.Add ND_FUNC, "ND_FUNC"
+        m.Add ND_STRING, "ND_STRING"
+        m.Add ND_CONCAT, "ND_CONCAT"
+        m.Add ND_ARRAY, "ND_ARRAY"
+        m.Add ND_ARRAY_ROW, "ND_ARRAY_ROW"
+    End If
+    Set NodeKindMap = m
 End Property
 
-Static Property Get OperatorMap() As Dictionary
-    Set OperatorMap = New Dictionary
-    OperatorMap.Add ND_ADD, "+"
-    OperatorMap.Add ND_SUB, "-"
-    OperatorMap.Add ND_MUL, "*"
-    OperatorMap.Add ND_DIV, "/"
-    OperatorMap.Add ND_EQ, "="
-    OperatorMap.Add ND_NE, "<>"
-    OperatorMap.Add ND_LT, "<"
-    OperatorMap.Add ND_LE, "<="
-    OperatorMap.Add ND_GT, ">"
-    OperatorMap.Add ND_GE, ">="
-    OperatorMap.Add ND_CONCAT, "&"
+Private Static Property Get OperatorMap() As Dictionary
+    Dim m As Dictionary
+    If m Is Nothing Then
+        Set m = New Dictionary
+        m.Add ND_ADD, "+"
+        m.Add ND_SUB, "-"
+        m.Add ND_MUL, "*"
+        m.Add ND_DIV, "/"
+        m.Add ND_EQ, "="
+        m.Add ND_NE, "<>"
+        m.Add ND_LT, "<"
+        m.Add ND_LE, "<="
+        m.Add ND_GT, ">"
+        m.Add ND_GE, ">="
+        m.Add ND_CONCAT, "&"
+    End If
+    Set OperatorMap = m
 End Property
 
 Public Function Tokenize(str As String) As Collection
