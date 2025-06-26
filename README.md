@@ -28,8 +28,8 @@ out:
 
 ## Installation
 
-Import Formulas.bas into your project
-Include "Microsoft Scripting Runtime"
+1. Import Formulas.bas into your project
+1. Include "Microsoft Scripting Runtime"
 
 ## Usage
 
@@ -37,7 +37,7 @@ To pretty-print a formula, use the `Pretty` function:
 
 ```vba
 Dim originalFormula As String
-originalFormula = "=CONCAT("R",MOD(ROW()-6,2)*2+1,"C",INT((ROW()-6)/2)*2+1)"
+originalFormula = "=CONCAT(""R"",MOD(ROW()-6,2)*2+1,""C"",INT((ROW()-6)/2)*2+1)"
 
 Dim fmt As Formulas.Formatter
 fmt = Formulas.NewFormatter( _
