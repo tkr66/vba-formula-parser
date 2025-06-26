@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := decombine
+
 help:
 	cmd.exe /c 'cscript vbac.wsf help'
 
