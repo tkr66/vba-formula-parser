@@ -50,15 +50,21 @@ fmt = Formulas.NewFormatter( _
 
 Dim formattedFormula As String
 formattedFormula = Formulas.Pretty(originalFormula, fmt)
+debug.Print formattedFormula
 ```
 
 ## Supported Syntax
 
 - Operators
-  - Arithmetic (+, -, \*, /, ^)
+  - Arithmetic (+, -, \*, /)
   - Comparison (=, <>, <, >, <=, >=)
   - Concatenation (&)
+  - Range Reference (:)
 - Function Calls
+- CellReferences
+  - Absolute
+  - Relative
+  - Mixed (e.g., $A1, A$1)
 - Constants
   - Numeric
   - String
