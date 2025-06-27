@@ -20,12 +20,13 @@
 <args> ::= <expr> ("," <expr>?)*
 
 <refs> ::= <ref> (":" <ref>)*
-<ref> ::= <char>{1,3} <num>
+<ref> ::= "$"? <column_letter> "$"? <num>
 
+<column_letter> ::= <char> <char>? <char>?
 <funcname> ::= <ident> ("." | <ident> | <num>)*
 <string> ::= "\"" any* "\""
+<ident> ::= (<char> | <num> | "_" | "\")+
 <num> ::= <digit>+
-<ident> ::= (<char> | "_" | "\")+
 
 <digit> ::= [0-9]
 <char> ::= ([a-z] | [A-Z])

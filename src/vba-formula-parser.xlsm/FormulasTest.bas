@@ -124,6 +124,24 @@ Sub TestTokenize()
             Token(TK_REF, "A1048576", 17), _
             Token(TK_IDENT, "A1048577", 26) _
         )))
+    tests.Add Array( _
+        "tokenize relative and absolute", _
+        "A1 B1:C1 $G1:G$1:$G$1 $G:$G", _
+        Stringify(Array( _
+            Token(TK_REF, "A1", 1), _
+            Token(TK_REF, "B1", 4), _
+            Token(TK_PUNCT, ":", 6), _
+            Token(TK_REF, "C1", 7), _
+            Token(TK_REF, "$G1", 10), _
+            Token(TK_PUNCT, ":", 13), _
+            Token(TK_REF, "G$1", 14), _
+            Token(TK_PUNCT, ":", 17), _
+            Token(TK_REF, "$G$1", 18), _
+            Token(TK_REF, "$G", 23), _
+            Token(TK_PUNCT, ":", 25), _
+            Token(TK_REF, "$G", 26) _
+        )))
+
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
@@ -213,13 +231,15 @@ Sub TestPretty()
     )
     tests.Add Array( _
         "pretty function with args", _
-        "=SUM(A1, B1:C1, (D1:E1:F1))", _
+        "=SUM(A1, B1:C1, (D1:E1:F1), $G1:G$1:$G$1, $G:$G)", _
         "SUM(" & vbCrLf & _
         "  A1," & vbCrLf & _
         "  B1:C1," & vbCrLf & _
         "  (" & vbCrLf & _
         "    D1:E1:F1" & vbCrLf & _
-        "  )" & vbCrLf & _
+        "  )," & vbCrLf & _
+        "  $G1:G$1:$G$1," & vbCrLf & _
+        "  $G:$G" & vbCrLf & _
         ")" _
     )
     tests.Add Array( _

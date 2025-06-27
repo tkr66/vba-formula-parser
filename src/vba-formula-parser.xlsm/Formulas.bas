@@ -244,6 +244,18 @@ Private Function Tokenizer_NextToken(t As Tokenizer) As Token
             Tokenizer_Rewind t
             If Tokenizer_Peek(t) = "(" Then
                 Tokenizer_NextToken = Tokenizer_NewToken(t, TK_FUNCNAME)
+            ElseIf IsColumnAlpha(Tokenizer_Current(t)) Then
+                If Tokenizer_Consume(t, "$") Then
+                    Do While IsNumeric(Tokenizer_Next(t)): Loop: Tokenizer_Rewind t
+                    Tokenizer_NextToken = Tokenizer_NewToken(t, TK_REF)
+                Else
+                    If IsNumeric(Tokenizer_Peek(t)) Then
+                        Do While IsNumeric(Tokenizer_Next(t)): Loop: Tokenizer_Rewind t
+                        Tokenizer_NextToken = Tokenizer_NewToken(t, TK_REF)
+                    Else
+                        Tokenizer_NextToken = Tokenizer_NewToken(t, TK_IDENT)
+                    End If
+                End If
             Else
                 Dim addrOrIdent As String
                 addrOrIdent = Tokenizer_Current(t)
@@ -253,6 +265,11 @@ Private Function Tokenizer_NextToken(t As Tokenizer) As Token
                     Tokenizer_NextToken = Tokenizer_NewToken(t, TK_IDENT)
                 End If
             End If
+        Case Tokenizer_Consume(t, "$")
+            Do While IsAlpha(Tokenizer_Next(t)): Loop: Tokenizer_Rewind t
+            Tokenizer_Consume t, "$"
+            Do While IsNumeric(Tokenizer_Next(t)): Loop: Tokenizer_Rewind t
+            Tokenizer_NextToken = Tokenizer_NewToken(t, TK_REF)
         Case Tokenizer_Consume(t, """")
             Do
                 If Not Tokenizer_HasNext(t) Then
@@ -296,6 +313,10 @@ Private Function IsIdent(c As String) As Boolean
 End Function
 
 Private Function IsAlpha(c As String) As Boolean
+    If c = "" Then
+        IsAlpha = False
+        Exit Function
+    End If
     Dim dec As Long
     dec = Asc(c)
     IsAlpha = (65 <= dec And dec <= 90) Or (97 <= dec And dec <= 122)
