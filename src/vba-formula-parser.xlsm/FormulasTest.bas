@@ -116,20 +116,35 @@ Sub TestTokenize()
     Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
-            Dim json As String
-            json = JsonConverter.ConvertToJson(Application.Run("Formulas.Tokenize", CStr(t(1))))
-            If CStr(json) = CStr(t(2)) Then
-                Debug.Print "ok: " & t(0)
-            Else
-                Debug.Print "assert failed: " & t(0)
-                Debug.Print "  " & "input: " & t(1)
-                Debug.Print "  " & "left  == " & json
-                Debug.Print "  " & "right == " & t(2)
-                Debug.Print
-            End If
+            RunTokenizeTest t
         End If
     Next t
     Debug.Print
+End Sub
+
+Private Sub RunTokenizeTest(t As Variant)
+    On Error GoTo Catch
+        Dim actual As String
+        actual = JsonConverter.ConvertToJson(Application.Run("Formulas.Tokenize", CStr(t(1))))
+        If actual = CStr(t(2)) Then
+            Debug.Print "ok: " & t(0)
+        Else
+            Debug.Print "ng: " & t(0)
+            Debug.Print "assert failed: "
+            Debug.Print "  " & "input: " & t(1)
+            Debug.Print "  " & "left  == " & actual
+            Debug.Print "  " & "right == " & t(2)
+            Debug.Print
+        End If
+Catch:
+    If Err.Number <> 0 Then
+        If Left(t(0), 6) = "failed" Then
+            Debug.Print "ok: " & t(0)
+        Else
+            Debug.Print "ng: " & t(0)
+            Debug.Print "  " & Err.Description
+        End If
+    End If
 End Sub
 
 Sub TestParse()
@@ -300,7 +315,6 @@ Sub TestPretty()
         "  ) * 2 + 1" & vbCrLf & _
         ")" _
     )
-    Dim t As Variant
     Dim fmt As Formulas.Formatter
     fmt = Formulas.NewFormatter( _
         indent:=" ", _
@@ -309,34 +323,38 @@ Sub TestPretty()
         eqAtStart:=False, _
         newLineAtEof:=False _
     )
+    Dim t As Variant
     For Each t In tests
         If IsArray(t) Then
-            On Error GoTo Catch
-                Dim actual As String
-                actual = Formulas.Pretty(CStr(t(1)), fmt)
-                If actual = CStr(t(2)) Then
-                    Debug.Print "ok: " & t(0)
-                Else
-                    Debug.Print "ng: " & t(0)
-                    Debug.Print "assert failed: "
-                    Debug.Print "  " & "input: " & t(1)
-                    Debug.Print "  " & "left  == " & actual
-                    Debug.Print "  " & "right == " & t(2)
-                    Debug.Print
-                End If
-            On Error GoTo 0
-Catch:
-            If Err.Number <> 0 Then
-                If Left(t(0), 6) = "failed" Then
-                    Debug.Print "ok: " & t(0)
-                Else
-                    Debug.Print "ng: " & t(0)
-                    Debug.Print "  " & Err.Description
-                End If
-            End If
+            RunPrettyTest t, fmt
         End If
     Next t
     Debug.Print
+End Sub
+
+Private Sub RunPrettyTest(t As Variant, fmt As Formulas.Formatter)
+    On Error GoTo Catch
+        Dim actual As String
+        actual = Formulas.Pretty(CStr(t(1)), fmt)
+        If actual = CStr(t(2)) Then
+            Debug.Print "ok: " & t(0)
+        Else
+            Debug.Print "ng: " & t(0)
+            Debug.Print "assert failed: "
+            Debug.Print "  " & "input: " & t(1)
+            Debug.Print "  " & "left  == " & actual
+            Debug.Print "  " & "right == " & t(2)
+            Debug.Print
+        End If
+Catch:
+    If Err.Number <> 0 Then
+        If Left(t(0), 6) = "failed" Then
+            Debug.Print "ok: " & t(0)
+        Else
+            Debug.Print "ng: " & t(0)
+            Debug.Print "  " & Err.Description
+        End If
+    End If
 End Sub
 
 Private Function Token(kind As TokenKind, val As String, col As Long) As Variant()
