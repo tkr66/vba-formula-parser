@@ -413,12 +413,12 @@ Private Function NewParser(tokens As Collection) As Parser
     NewParser = p
 End Function
 
-Private Function NewNode(kind As String) As Dictionary
+Private Function NewNode(kind As NodeKind) As Dictionary
     Set NewNode = New Dictionary
     NewNode.Add "kind", kind
 End Function
 
-Private Function NewBinary(kind As String, lhs As Dictionary, rhs As Dictionary) As Dictionary
+Private Function NewBinary(kind As NodeKind, lhs As Dictionary, rhs As Dictionary) As Dictionary
     Set NewBinary = NewNode(kind)
     NewBinary.Add "lhs", lhs
     NewBinary.Add "rhs", rhs
@@ -906,7 +906,6 @@ Private Function Format(node As Dictionary, fmt As Formatter) As String
             Next i
         Case ND_EMPTY
             Push sb, ""
-        Case Else
     End Select
 
     Format = ToString(sb)
