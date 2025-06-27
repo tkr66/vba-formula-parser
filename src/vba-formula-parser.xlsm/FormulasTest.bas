@@ -175,13 +175,23 @@ Sub TestParse()
         "=""a b c""", _
         "=(+1&""abc"")&NOW()", _
         "={1,2;""3"",""4"";TRUE,FALSE}*{2,2}", _
+        "=SUM(A1, B1:C1, (D1:E1:F1))", _
         "" _
+    )
+    Dim fmt As Formulas.Formatter
+    fmt = Formulas.NewFormatter( _
+        indent:=" ", _
+        indentLength:=2, _
+        newLine:=vbCrLf, _
+        eqAtStart:=False, _
+        newLineAtEof:=False _
     )
     Dim t As Variant
     For Each t In tests
         If CStr(t) <> "" Then
             Debug.Print t
-            Call DumpNode(Formulas.Parse(CStr(t)), 0)
+            Debug.Print Formulas.DebugAst(Formulas.Parse(CStr(t)), fmt)
+            Debug.Print
         End If
     Next t
 End Sub
