@@ -1,4 +1,4 @@
-# vba formula parser
+# vba formula formatter
 
 A library to parse formulas
 
@@ -74,4 +74,3 @@ debug.Print formattedFormula
 ## Features
 
 - Formula Formatting
-- AST Generation
