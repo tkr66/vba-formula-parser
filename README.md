@@ -1,6 +1,6 @@
 # vba formula formatter
 
-A library to parse formulas
+A library to format formulas
 
 ## Examples
 
